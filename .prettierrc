@@ -1,0 +1,4 @@
+# Allows .md wrapping
+proseWrap: always
+
+printWidth: 80

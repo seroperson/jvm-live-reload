@@ -1,0 +1,18 @@
+# mill output
+out/
+.bsp/
+mill.*
+
+# sbt output
+target/
+
+# IDE stuff
+.idea/
+.vscode/
+.roo/
+
+# metals
+.metals/
+metals.sbt
+.bloop/
+
