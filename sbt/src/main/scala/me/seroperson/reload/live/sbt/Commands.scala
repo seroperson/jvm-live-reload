@@ -1,13 +1,15 @@
 package me.seroperson.reload.live.sbt
 
+import LiveReloadPlugin.autoImport._
 import java.nio.file.Path
 import sbt._
 import sbt.Keys._
+import sbt.internal.inc.Analysis
 
 object Commands {
-  /*val playReloadTask = Def.task {
+  val playReloadTask = Def.task {
     playCompileEverything.value.reduceLeft(_ ++ _)
-  }*/
+  }
 
   // ----- Play prompt
 
@@ -54,17 +56,16 @@ object Commands {
     commonClassLoader
   }
 
-  /*val playCompileEverythingTask = Def.taskDyn {
+  val playCompileEverythingTask = Def.taskDyn {
     // Run playAssetsWithCompilation, or, if it doesn't exist (because it's not a Play project), just the compile task
-    val compileTask =
-      Def.taskDyn(playAssetsWithCompilation ?? (Compile / compile).value)
+    val compileTask = Def.taskDyn(Compile / compile)
 
     compileTask.all(
       ScopeFilter(
         inDependencies(thisProjectRef.value)
       )
     )
-  }*/
+  }
 
   /*val h2Command = Command.command("h2-browser") { (state: State) =>
     try {

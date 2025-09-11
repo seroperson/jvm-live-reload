@@ -18,7 +18,8 @@ public final class DevServerRunner {
 	private DevServerReloader reloader;
 
 	private ReloadableServer getReloadableServer(ClassLoader applicationLoader, String mainClassName,
-			DevServerSettings settings) throws ReflectiveOperationException {
+			String internalMainClassName, DevServerSettings settings, List<String> shutdownHookClasses)
+			throws ReflectiveOperationException {
 		var httpPort = settings.getHttpPort();
 		var httpsPort = settings.getHttpsPort();
 		var httpAddress = settings.getHttpAddress();
@@ -38,14 +39,15 @@ public final class DevServerRunner {
 		 * httpAddress); } else {
 		 */
 
+		System.out.println("Shutdown hook classes: " + shutdownHookClasses);
 		System.out.println("Loading main class: " + mainClassName);
 		System.out.println(java.util.Arrays.deepToString(mainClass.getMethods()));
 
 		// var m = mainClass.getMethod("start", BuildLink.class, Integer.class,
 		// String.class);
 		// server = (ReloadableServer) m.invoke(null, reloader, httpPort, httpAddress);
-		var m = mainClass.getMethod("start", BuildLink.class);
-		server = (ReloadableServer) m.invoke(null, reloader);
+		var m = mainClass.getMethod("start", BuildLink.class, String.class, List.class);
+		server = (ReloadableServer) m.invoke(null, reloader, internalMainClassName, shutdownHookClasses);
 		// }
 		return server;
 	}
@@ -54,7 +56,7 @@ public final class DevServerRunner {
 			Supplier<CompileResult> reloadCompile, Function<ClassLoader, ClassLoader> assetsClassLoader,
 			Supplier<Boolean> triggerReload, List<File> monitoredFiles, FileWatchService fileWatchService,
 			File projectPath, Map<String, String> devSettings, List<String> args, String mainClassName,
-			Object reloadLock) {
+			String internalMainClassName, Object reloadLock, List<String> shutdownHookClasses) {
 		if (reloader != null) {
 			throw new IllegalStateException("Cannot run a dev server because another one is already running!");
 		}
@@ -114,6 +116,7 @@ public final class DevServerRunner {
 			 * the applicationLoader, creating a full circle for resource loading.
 			 */
 			var sharedClasses = List.of(me.seroperson.reload.live.build.BuildLink.class.getName(),
+					me.seroperson.reload.live.hook.Hook.class.getName(),
 					me.seroperson.reload.live.build.ReloadableServer.class.getName());
 			ClassLoader delegatingLoader = new DelegatingClassLoader(commonClassLoader, sharedClasses, buildLoader,
 					() -> reloader.getClassLoader());
@@ -135,7 +138,8 @@ public final class DevServerRunner {
 			reloader = new DevServerReloader(projectPath, assetsLoader, reloadCompile, devSettings, triggerReload,
 					monitoredFiles, fileWatchService, reloadLock);
 
-			ReloadableServer server = getReloadableServer(applicationLoader, mainClassName, settings);
+			ReloadableServer server = getReloadableServer(applicationLoader, mainClassName, internalMainClassName,
+					settings, shutdownHookClasses);
 
 			// Notify hooks
 			// RunHooksRunner.run(runHooks, RunHook::afterStarted);
@@ -202,10 +206,11 @@ public final class DevServerRunner {
 			List<File> dependencyClasspath, Supplier<CompileResult> reloadCompile,
 			Function<ClassLoader, ClassLoader> assetsClassLoader, Supplier<Boolean> triggerReload,
 			List<File> monitoredFiles, FileWatchService fileWatchService, File projectPath,
-			Map<String, String> devSettings, List<String> args, String mainClassName, Object reloadLock) {
+			Map<String, String> devSettings, List<String> args, String mainClassName, String internalClassName,
+			Object reloadLock, List<String> shutdownHookClasses) {
 		return getInstance().run(javaOptions, commonClassLoader, dependencyClasspath, reloadCompile, assetsClassLoader,
 				triggerReload, monitoredFiles, fileWatchService, projectPath, devSettings, args, mainClassName,
-				reloadLock);
+				internalClassName, reloadLock, shutdownHookClasses);
 	}
 
 	private DevServerRunner() {

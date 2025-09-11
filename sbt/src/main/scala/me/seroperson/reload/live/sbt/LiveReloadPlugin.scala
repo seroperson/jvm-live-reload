@@ -1,6 +1,7 @@
 package me.seroperson.reload.live.sbt
 
 import java.util.function.Supplier
+import me.seroperson.reload.live.hook.Hook
 import me.seroperson.reload.live.webserver.CompileResult
 import me.seroperson.reload.live.webserver.DevServerRunner
 import play.dev.filewatch.FileWatchService
@@ -25,6 +26,9 @@ object LiveReloadPlugin extends AutoPlugin {
       settingKey[FileWatchService](
         "The watch service Play uses to watch for file changes"
       )
+
+    val startupHooks = settingKey[Seq[String]]("Startup hooks")
+    val shutdownHooks = settingKey[Seq[String]]("Shutdown hooks")
 
     val devSettings = settingKey[Seq[(String, String)]]("playDevSettings")
 
@@ -152,7 +156,9 @@ object LiveReloadPlugin extends AutoPlugin {
       devSettings.value.toMap.asJava,
       args.asJava,
       (Compile / run / mainClass).value.get,
-      LiveReloadPlugin
+      (Compile / mainClass).value.get,
+      LiveReloadPlugin,
+      shutdownHooks.value.asJava
     )
 
     val serverDidStart = interaction match {
@@ -268,13 +274,6 @@ object LiveReloadPlugin extends AutoPlugin {
     }
   }*/
 
-  /*val playFileWatch = "org.playframework" %% "play-file-watch" % "2.0.1"
-  val javalin = "io.javalin" % "javalin" % "6.7.0"
-  lazy val dependencies = Seq(
-    playFileWatch,
-    javalin
-  )*/
-
   private def watchContinuously(state: State): Option[Watched] = {
     for {
       watched <- state.get(Watched.Configuration)
@@ -291,6 +290,7 @@ object LiveReloadPlugin extends AutoPlugin {
     },
     libraryDependencies ++= Seq(
       "me.seroperson" %% "jvm-live-reload-webserver" % "0.0.1"
+      // "me.seroperson" %% "jvm-live-reload-hooks" % "0.0.1"
     ),
     fileWatchService := {
       FileWatchService.defaultWatchService(
@@ -319,6 +319,10 @@ object LiveReloadPlugin extends AutoPlugin {
       _.filter(_ => true) // .filter(_.get(WebKeys.webModulesLib.key).isEmpty)
     },
     playCommonClassloader := Commands.playCommonClassloaderTask.value,
+    playReload := Commands.playReloadTask.value,
+    playCompileEverything := Commands.playCompileEverythingTask.value
+      .asInstanceOf[Seq[Analysis]],
+    shutdownHooks := Seq("me.seroperson.reload.live.hook.ZioHttpShutdownHook"),
     Compile / Keys.run := playDefaultRunTask.evaluated,
     Compile / Keys.run / mainClass := Some(
       "me.seroperson.reload.live.webserver.DevServerStart"

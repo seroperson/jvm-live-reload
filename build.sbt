@@ -32,7 +32,7 @@ lazy val publishSettings = Seq(
 
 lazy val root = (project in file("."))
   .settings(publish / skip := true)
-  .aggregate(`sbt-live-reload`, `webserver`, `build-link`)
+  .aggregate(`sbt-live-reload`, `webserver`, `build-link`, `hooks`)
 
 lazy val `sbt-live-reload` = (project in file("sbt"))
   .enablePlugins(SbtPlugin)
@@ -50,7 +50,22 @@ lazy val `webserver` = (project in file("core/webserver"))
   .settings(
     name := "jvm-live-reload-webserver",
     description := "Development-mode webserver for Live Reload expirience on JVM",
-    libraryDependencies += "io.javalin" % "javalin" % "6.7.0"
+    libraryDependencies ++= Seq(
+      "io.javalin" % "javalin" % "6.7.0",
+      "io.undertow" % "undertow-core" % "2.1.0.Final"
+    )
+  )
+  .dependsOn(`build-link`)
+  .dependsOn(`hooks`)
+
+lazy val `hooks` = (project in file("core/hooks"))
+  .settings(publishSettings)
+  .settings(
+    name := "jvm-live-reload-hooks",
+    description := "Hooks",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-http" % "3.3.3" % Provided
+    )
   )
   .dependsOn(`build-link`)
 
