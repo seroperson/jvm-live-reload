@@ -1,3 +1,5 @@
 package me.seroperson.reload.live.hook;
 
-class ZioHttpShutdownHook extends zio.ZioZioHttpShutdownHook {}
+import zio.ZioZioHttpShutdownHook
+
+class ZioHttpShutdownHook extends ZioZioHttpShutdownHook

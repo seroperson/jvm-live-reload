@@ -1,12 +1,12 @@
 package me.seroperson.reload.live.webserver;
 
+import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.BuildLink;
 import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.hook.Hook;
 
 import java.time.Duration;
 import java.io.Closeable;
-import io.javalin.Javalin;
 import java.util.List;
 import java.net.URI;
 import java.net.ServerSocket;
@@ -22,20 +22,13 @@ import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
 
 public class DevServerStart implements ReloadableServer {
 
-	public static ReloadableServer start(BuildLink build, String mainClass,
-			List<String> shutdownHookClasses/* , int port, String address */) {
-		System.out.println("Starting DevServerStart");
-		var server = new DevServerStart(build, mainClass, shutdownHookClasses);
-		return server;
-	}
-
-	private Javalin j;
 	private Undertow server;
 	private Thread appThread;
 	private ClassLoader classLoader;
 	private String mainClass;
 	private List<Hook> shutdownHooks;
 	private final Duration shutdownPollingInterval;
+	private final BuildLogger logger;
 
 	public static <T> T ignoringExc(RunnableExc<T> r) {
 		try {
@@ -63,41 +56,38 @@ public class DevServerStart implements ReloadableServer {
 		}
 	}
 
-	public DevServerStart(BuildLink buildLink, String mainClass, List<String> shutdownHookClasses) {
-
-		System.out.println("Checking availability " + shutdownHookClasses);
-		shutdownHookClasses.forEach((v) -> System.out.println(v + " - " + isClass(v)));
-		shutdownHooks = shutdownHookClasses.stream()
-				.map((v) -> ignoringExc(() -> (Hook) Class.forName(v).newInstance())).toList();
-		System.out.println("Init " + shutdownHooks);
+	public DevServerStart(BuildLink buildLink, BuildLogger logger, String mainClass, List<String> shutdownHookClasses) {
 
 		this.mainClass = mainClass;
 		this.shutdownPollingInterval = Duration.ofSeconds(5);
+		this.logger = logger;
 
-		ProxyClient proxyClientProvider = new SimpleProxyClientProvider(URI.create("http://localhost:8080"));
-		HttpHandler handler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404);
-		Undertow server = Undertow.builder().addHttpListener(9000, "localhost").setHandler(new HttpHandler() {
+		shutdownHooks = shutdownHookClasses.stream()
+				.map((v) -> ignoringExc(() -> (Hook) Class.forName(v).newInstance())).toList();
+
+		var proxyClientProvider = new SimpleProxyClientProvider(URI.create("http://localhost:8080"));
+		var handler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404);
+		server = Undertow.builder().addHttpListener(9000, "localhost").setHandler(new HttpHandler() {
 			@Override
 			public void handleRequest(HttpServerExchange httpServerExchange) throws Exception {
 				var reloadResult = buildLink.reload();
 				if (reloadResult instanceof ClassLoader) {// New application classes
-					System.out.println("Must reload with new classloader: " + reloadResult);
 					stopInternal();
 					startInternal((ClassLoader) reloadResult);
 					// reload();
 				} else if (reloadResult == null) {// No change in the application classes
 					;
-				} else {
+				} else if (reloadResult instanceof Throwable) {
 					// case NonFatal(t) => Failure(t) // An error we can display
 					// case t: Throwable => throw t // An error that we can't handle
-					System.out.println("Error: " + reloadResult.toString());
+					throw new RuntimeException((Throwable) reloadResult);
 				}
 
 				httpServerExchange.setRelativePath(httpServerExchange.getRequestPath());
 				if (!isTcpPortAvailable(8080)) {
 					handler.handleRequest(httpServerExchange);
 				} else {
-					System.out.println("Waiting for server to become available");
+					logger.info("Waiting for the server to become available ...");
 					while (isTcpPortAvailable(8080)) {
 						Thread.sleep(1000L);
 					}
@@ -105,48 +95,23 @@ public class DevServerStart implements ReloadableServer {
 				}
 			}
 		}).build();
+
 		server.start();
-
-		/*
-		 * j = Javalin.create().get("/", ctx -> { var reloadResult = buildLink.reload();
-		 * if (reloadResult instanceof ClassLoader) {// New application classes
-		 * System.out.println("Must reload with new classloader: " + reloadResult);
-		 * stopInternal(); startInternal((ClassLoader) reloadResult); // reload(); }
-		 * else if (reloadResult == null) {// No change in the application classes ; }
-		 * else { // case NonFatal(t) => Failure(t) // An error we can display // case
-		 * t: Throwable => throw t // An error that we can't handle
-		 * System.out.println("Error: " + reloadResult.toString()); }
-		 * ctx.result("Hello World"); }).start(9000);
-		 */
-		System.out.println("Started!");
-	}
-
-	public boolean isClass(String className) {
-		try {
-			Class.forName(className);
-			return true;
-		} catch (ClassNotFoundException e) {
-			return false;
-		}
 	}
 
 	private void startInternal(ClassLoader classLoader) {
 		this.classLoader = classLoader;
-		// Start the application in a new thread
 		this.appThread = new Thread(() -> {
 			Thread.currentThread().setName("main");
 			try {
 				Class<?> clazz = classLoader.loadClass(mainClass);
-				System.out.println("Loading main class " + mainClass);
-				System.out.println("Main class methods: " + java.util.Arrays.deepToString(clazz.getMethods()));
 				var mainMethod = clazz.getMethod("main", String[].class);
 				mainMethod.invoke(null, (Object) new String[0]);
 			} catch (Exception e) {
 				if (e.getCause() instanceof InterruptedException) {
-					System.out.println("App Thread was interrupted");
+					logger.info("Application thread was interrupted");
 				} else {
-					System.out.println("Failed to invoke main method on " + mainClass + ".");
-					e.printStackTrace();
+					logger.error("Failed to invoke main method on " + mainClass + ".");
 					stopInternal();
 					throw new RuntimeException(e);
 				}
@@ -156,24 +121,16 @@ public class DevServerStart implements ReloadableServer {
 	}
 
 	private synchronized void stopInternal() {
-		System.out.println("Stopping Application " + mainClass);
 		if (appThread != null) {
-			System.out.println("Interrupting existing application thread");
+			logger.info("Stopping " + mainClass);
 			appThread.interrupt();
 
 			shutdownHooks.forEach((v) -> v.hook());
 
-			// for {
-			// roots <- Fiber.roots
-			// _ <- Fiber.interruptAll(roots.view.filter(fiber => fiber.isAlive() &&
-			// (fiber.id != mainFiberId)))
-			// } yield ()
-			// }
-
 			try {
 				appThread.join(shutdownPollingInterval.toMillis());
 				while (appThread.isAlive()) {
-					System.out.println("Application thread is still running after interrupt.");
+					logger.warn("Application thread is still running after interrupt.");
 					appThread.join(shutdownPollingInterval.toMillis());
 				}
 			} catch (InterruptedException e) {
@@ -182,31 +139,30 @@ public class DevServerStart implements ReloadableServer {
 			appThread = null;
 		}
 
-		System.out.println("Clean up previous class loader and application instance");
-
-		if (classLoader instanceof Closeable) {
-			try {
-				((Closeable) classLoader).close();
-			} catch (Exception e) {
-				System.out.println("Failed to close class loader: " + e.getMessage());
+		if (classLoader != null) {
+			logger.info("Cleaning up old instances");
+			if (classLoader instanceof Closeable) {
+				try {
+					((Closeable) classLoader).close();
+				} catch (Exception e) {
+					logger.error("Failed to close class loader: " + e.getMessage());
+				}
 			}
+			classLoader = null;
+			System.gc();
 		}
-		classLoader = null;
-		System.gc();
 	}
 
 	@Override
 	public void stop() {
 		server.stop();
 		stopInternal();
-		System.out.println("Stopped");
 	}
 
 	@Override
 	public void reload() {
 		// stopInternal();
 		// startInternal();
-		System.out.println("Reloaded");
 	}
 
 }

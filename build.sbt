@@ -1,8 +1,3 @@
-val playFileWatch = "org.playframework" %% "play-file-watch" % "2.0.1"
-lazy val dependencies = Seq(
-  playFileWatch
-)
-
 lazy val publishSettings = Seq(
   version := "0.0.1",
   organization := "me.seroperson",
@@ -32,18 +27,19 @@ lazy val publishSettings = Seq(
 
 lazy val root = (project in file("."))
   .settings(publish / skip := true)
-  .aggregate(`sbt-live-reload`, `webserver`, `build-link`, `hooks`)
+  .aggregate(`sbt-live-reload`, `webserver`, `build-link`, `hooks`, `runner`)
 
 lazy val `sbt-live-reload` = (project in file("sbt"))
   .enablePlugins(SbtPlugin)
   .settings(publishSettings)
-  .settings(libraryDependencies ++= dependencies)
   .settings(
     name := "sbt-live-reload",
     description := "Providing an universal Live Reload expirience for web applications built with SBT",
-    sbtPlugin := true
+    sbtPlugin := true,
+    scriptedBufferLog := false
   )
   .dependsOn(`build-link`)
+  .dependsOn(`runner`)
 
 lazy val `webserver` = (project in file("core/webserver"))
   .settings(publishSettings)
@@ -51,12 +47,20 @@ lazy val `webserver` = (project in file("core/webserver"))
     name := "jvm-live-reload-webserver",
     description := "Development-mode webserver for Live Reload expirience on JVM",
     libraryDependencies ++= Seq(
-      "io.javalin" % "javalin" % "6.7.0",
       "io.undertow" % "undertow-core" % "2.1.0.Final"
     )
   )
   .dependsOn(`build-link`)
   .dependsOn(`hooks`)
+
+lazy val `runner` = (project in file("core/runner"))
+  .settings(publishSettings)
+  .settings(
+    name := "jvm-live-reload-runner",
+    description := "Runner",
+    libraryDependencies += "org.playframework" %% "play-file-watch" % "2.0.1"
+  )
+  .dependsOn(`build-link`)
 
 lazy val `hooks` = (project in file("core/hooks"))
   .settings(publishSettings)

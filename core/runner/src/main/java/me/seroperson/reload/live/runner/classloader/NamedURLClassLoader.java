@@ -1,4 +1,4 @@
-package me.seroperson.reload.live.webserver.classloader;
+package me.seroperson.reload.live.runner.classloader;
 
 import java.net.URL;
 import java.net.URLClassLoader;

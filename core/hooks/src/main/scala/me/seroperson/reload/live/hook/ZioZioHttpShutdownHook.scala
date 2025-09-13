@@ -1,16 +1,17 @@
 package zio;
 
-// fiber.isAlive is private[zio]
-class ZioZioHttpShutdownHook extends me.seroperson.reload.live.hook.Hook {
+import me.seroperson.reload.live.hook.Hook
+
+// fiber.isAlive is private[zio], so we have to put this class into the `zio` package
+class ZioZioHttpShutdownHook extends Hook {
 
   override def hook(): Unit = {
-    java.lang.System.out.println("Running ZioZioHttpShutdownHook")
     if (isClass("zio.http.Server")) {
       implicit val unsafe = Unsafe.unsafe
       zio.Runtime.default.unsafe.run {
+        // Shutdown code from zio.ZIOAppPlatformSpecific.interruptRootFibers
         for {
           currentFiberId <- ZIO.fiberId
-          // zio.ZIOAppPlatformSpecific.interruptRootFibers
           roots <- Fiber.roots
           _ <- Fiber.interruptAll(
             roots.view.filter(fiber =>
@@ -19,7 +20,6 @@ class ZioZioHttpShutdownHook extends me.seroperson.reload.live.hook.Hook {
           )
         } yield ()
       }
-      java.lang.System.out.println("Finished ZioZioHttpShutdownHook")
     }
   }
 

@@ -1,0 +1,7 @@
+# Start dev mode
+> clean
+> run
+
+# Existing file change detection
+> verifyResourceContains / 200 Original
+

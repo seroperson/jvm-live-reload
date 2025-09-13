@@ -3,10 +3,10 @@ package me.seroperson.reload.live.sbt
 import java.net.URI
 import java.nio.file.Paths
 import java.util.Optional
-import me.seroperson.reload.live.webserver.CompileResult
-import me.seroperson.reload.live.webserver.CompileResult.CompileFailure
-import me.seroperson.reload.live.webserver.CompileResult.CompileSuccess
-import me.seroperson.reload.live.webserver.Source
+import me.seroperson.reload.live.runner.CompileResult
+import me.seroperson.reload.live.runner.CompileResult.CompileFailure
+import me.seroperson.reload.live.runner.CompileResult.CompileSuccess
+import me.seroperson.reload.live.runner.Source
 import sbt._
 import sbt.Keys._
 import sbt.internal.Output
@@ -106,71 +106,6 @@ object PlayReload {
             s"Can't handle class ${anyOther.getClass.getName} used for sourceMap"
           )
       }
-    }
-  }
-
-  def getProblems(
-      incomplete: Incomplete,
-      streams: Option[Streams]
-  ): Seq[Problem] = {
-    allProblems(incomplete) ++ {
-      Incomplete.linearize(incomplete).flatMap(getScopedKey).flatMap {
-        scopedKey =>
-          val JavacError = """\[error\]\s*(.*[.]java):(\d+):\s*(.*)""".r
-          val JavacErrorInfo = """\[error\]\s*([a-z ]+):(.*)""".r
-          val JavacErrorPosition = """\[error\](\s*)\^\s*""".r
-
-          streams
-            .map { streamsManager =>
-              var first: (Option[(String, String, String)], Option[Int]) =
-                (None, None)
-              var parsed: (Option[(String, String, String)], Option[Int]) =
-                (None, None)
-              Output
-                .lastLines(scopedKey, streamsManager, None)
-                .map(_.replace(scala.Console.RESET, ""))
-                .map(_.replace(scala.Console.RED, ""))
-                .collect {
-                  case JavacError(file, line, message) =>
-                    parsed = Some((file, line, message)) -> None
-                  case JavacErrorInfo(key, message) =>
-                    parsed._1.foreach { case (file, line, message1) =>
-                      parsed = Some(
-                        (
-                          file,
-                          line,
-                          s"$message1 [${key.trim}: ${message.trim}]"
-                        )
-                      ) -> None
-                    }
-                  case JavacErrorPosition(pos) =>
-                    parsed = parsed._1 -> Some(pos.length)
-                    if (first == ((None, None))) {
-                      first = parsed
-                    }
-                }
-              first
-            }
-            .collect { case (Some((fileName, lineNo, msg)), pos) =>
-              new ProblemImpl(
-                msg,
-                new PositionImpl(fileName, lineNo.toInt, pos)
-              )
-            }
-      }
-    }
-  }
-
-  def allProblems(inc: Incomplete): Seq[Problem] = allProblems(inc :: Nil)
-
-  def allProblems(incs: Seq[Incomplete]): Seq[Problem] = problems(
-    Incomplete.allExceptions(incs).toSeq
-  )
-
-  def problems(es: Seq[Throwable]): Seq[Problem] = {
-    es.flatMap {
-      case cf: CompileFailed => cf.problems
-      case _                 => Nil
     }
   }
 

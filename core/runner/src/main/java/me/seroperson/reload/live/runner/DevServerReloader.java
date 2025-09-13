@@ -1,7 +1,7 @@
-package me.seroperson.reload.live.webserver;
+package me.seroperson.reload.live.runner;
 
 import static java.util.stream.Collectors.joining;
-import static me.seroperson.reload.live.webserver.DevServerRunner.urls;
+import static me.seroperson.reload.live.runner.DevServerRunner.urls;
 
 import java.io.Closeable;
 import java.io.File;
@@ -22,13 +22,11 @@ import java.util.stream.Stream;
 import me.seroperson.reload.live.build.BuildLink;
 import play.dev.filewatch.FileWatchService;
 import play.dev.filewatch.FileWatcher;
-import me.seroperson.reload.live.webserver.CompileResult.CompileFailure;
-import me.seroperson.reload.live.webserver.CompileResult.CompileSuccess;
-import me.seroperson.reload.live.webserver.classloader.DelegatedResourcesClassLoader;
+import me.seroperson.reload.live.runner.CompileResult.CompileFailure;
+import me.seroperson.reload.live.runner.CompileResult.CompileSuccess;
+import me.seroperson.reload.live.runner.classloader.DelegatedResourcesClassLoader;
 
 class DevServerReloader implements BuildLink, Closeable {
-
-	private final File projectPath;
 
 	private static final AccessControlContext accessControlContext = AccessController.getContext();
 
@@ -46,16 +44,11 @@ class DevServerReloader implements BuildLink, Closeable {
 	private volatile URLClassLoader currentApplicationClassLoader;
 
 	// Flag to force a reload on the next request.
-	// This is set if a compile error occurs, and also by the forceReload method on
-	// BuildLink, which
-	// is called for example when evolutions have been applied.
+	// This is set if a compile error occurs.
 	private volatile boolean forceReloadNextTime = false;
 
 	// Whether any source files have changed since the last request.
 	private volatile boolean changed = false;
-
-	// The last successful compile results. Used for rendering nice errors.
-	private volatile Map<String, Source> currentSourceMap;
 
 	// Last time the classpath was modified in millis. Used to determine whether
 	// anything on the
@@ -68,10 +61,9 @@ class DevServerReloader implements BuildLink, Closeable {
 
 	private final AtomicInteger classLoaderVersion = new AtomicInteger(0);
 
-	DevServerReloader(File projectPath, ClassLoader baseClassLoader, Supplier<CompileResult> compile,
-			Map<String, String> devSettings, Supplier<Boolean> triggerReload, List<File> monitoredFiles,
-			FileWatchService fileWatchService, Object reloadLock) {
-		this.projectPath = projectPath;
+	DevServerReloader(ClassLoader baseClassLoader, Supplier<CompileResult> compile, Map<String, String> devSettings,
+			Supplier<Boolean> triggerReload, List<File> monitoredFiles, FileWatchService fileWatchService,
+			Object reloadLock) {
 		this.baseClassLoader = baseClassLoader;
 		this.compile = compile;
 		this.devSettings = devSettings;
@@ -105,11 +97,6 @@ class DevServerReloader implements BuildLink, Closeable {
 		}, accessControlContext);
 	}
 
-	@Override
-	public File projectPath() {
-		return projectPath;
-	}
-
 	private Object reload(boolean shouldReload) {
 		// Run the reload task, which will trigger everything to compile
 		CompileResult compileResult = compile.get();
@@ -121,7 +108,6 @@ class DevServerReloader implements BuildLink, Closeable {
 		} else if (compileResult instanceof CompileSuccess) {
 			var result = (CompileSuccess) compileResult;
 			var cp = result.getClasspath();
-			currentSourceMap = result.getSources();
 
 			// We only want to reload if the classpath has changed.
 			// Assets don't live on the classpath, so they won't trigger a reload.
@@ -163,7 +149,7 @@ class DevServerReloader implements BuildLink, Closeable {
 	public Object reload() {
 		synchronized (reloadLock) {
 			if (changed || (triggerReload != null && triggerReload.get()) || forceReloadNextTime
-					|| currentSourceMap == null || currentApplicationClassLoader == null) {
+					|| currentApplicationClassLoader == null) {
 				var shouldReload = forceReloadNextTime;
 				changed = false;
 				forceReloadNextTime = false;
@@ -185,42 +171,8 @@ class DevServerReloader implements BuildLink, Closeable {
 		}
 	}
 
-	@Override
-	public Map<String, String> settings() {
-		return devSettings;
-	}
-
-	@Override
-	public void forceReload() {
-		forceReloadNextTime = true;
-	}
-
-	@Override
-	public Object[] findSource(String className, Integer line) {
-		var topType = className.split("\\$")[0];
-		if (currentSourceMap == null || !currentSourceMap.containsKey(topType))
-			return null;
-		var source = currentSourceMap.get(topType);
-		if (source.getOriginal() == null) {
-			return new Object[] { source.getFile(), line };
-		} else if (line != null) {
-			var origFile = source.getOriginal();
-			var key = Arrays.stream(origFile.getName().split("\\.")).skip(1).collect(joining("."));
-			/*
-			 * if (generatedSourceHandlers.containsKey(key)) { return new Object[] {
-			 * origFile, generatedSourceHandlers.get(key).getOriginalLine(source.getFile(),
-			 * line) };
-			 */
-			// } else {
-			return new Object[] { origFile, line };
-			// }
-		}
-		return new Object[] { source.getOriginal(), null };
-	}
-
 	public void close() {
 		currentApplicationClassLoader = null;
-		currentSourceMap = null;
 		if (watcher != null)
 			watcher.stop();
 	}
