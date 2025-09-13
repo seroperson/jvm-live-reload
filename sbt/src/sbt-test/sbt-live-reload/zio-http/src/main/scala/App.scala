@@ -6,6 +6,9 @@ object GreetingServer extends ZIOAppDefault {
     Routes(
       Method.GET / "greet" -> handler { (req: Request) =>
         Response.text(s"Hello World")
+      },
+      Method.GET / "health" -> handler { (req: Request) =>
+        Response.ok
       }
     )
   def run = Server.serve(routes).provide(Server.default)

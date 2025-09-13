@@ -146,3 +146,43 @@ object PlayConsoleInteractionMode extends PlayInteractionMode {
 
   override def toString = "Console Interaction Mode"
 }
+
+/** Simple implementation of the non-blocking interaction mode that simply
+  * stores the current application in a static variable.
+  */
+object StaticPlayNonBlockingInteractionMode
+    extends PlayNonBlockingInteractionMode {
+  private var current: Option[Closeable] = None
+
+  /** Start the server, if not already started
+    *
+    * @param server
+    *   A callback to start the server, that returns a closeable to stop it
+    *
+    * @return
+    *   A boolean indicating if the server was started (true) or not (false).
+    */
+  def start(server: => Closeable): Boolean = synchronized {
+    current match {
+      case Some(_) =>
+        println("Not starting server since one is already started")
+        false
+      case None =>
+        println("Starting server")
+        current = Some(server)
+        true
+    }
+  }
+
+  /** Stop the server started by the last start request, if such a server exists
+    */
+  def stop() = synchronized {
+    current match {
+      case None => println("Not stopping server since none is started")
+      case Some(server) =>
+        println("Stopping server")
+        server.close()
+        current = None
+    }
+  }
+}

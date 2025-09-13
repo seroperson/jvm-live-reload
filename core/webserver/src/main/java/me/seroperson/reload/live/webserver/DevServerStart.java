@@ -8,10 +8,17 @@ import me.seroperson.reload.live.hook.Hook;
 import java.time.Duration;
 import java.io.Closeable;
 import java.util.List;
+import java.util.Map;
 import java.net.URI;
 import java.net.ServerSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
+import java.io.IOException;
+import java.net.http.HttpRequest;
+import java.net.http.HttpClient;
+import java.net.http.HttpResponse;
+import java.util.concurrent.atomic.AtomicBoolean;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -19,6 +26,10 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
+import io.undertow.server.handlers.builder.PredicatedHandler;
+import io.undertow.predicate.Predicate;
+import io.undertow.predicate.PredicatesHandler;
+import io.undertow.util.AttachmentKey;
 
 public class DevServerStart implements ReloadableServer {
 
@@ -27,8 +38,10 @@ public class DevServerStart implements ReloadableServer {
 	private ClassLoader classLoader;
 	private String mainClass;
 	private List<Hook> shutdownHooks;
+	private AtomicBoolean isRestarting = new AtomicBoolean(false);
 	private final Duration shutdownPollingInterval;
 	private final BuildLogger logger;
+	private final BuildLink buildLink;
 
 	public static <T> T ignoringExc(RunnableExc<T> r) {
 		try {
@@ -59,6 +72,7 @@ public class DevServerStart implements ReloadableServer {
 	public DevServerStart(BuildLink buildLink, BuildLogger logger, String mainClass, List<String> shutdownHookClasses) {
 
 		this.mainClass = mainClass;
+		this.buildLink = buildLink;
 		this.shutdownPollingInterval = Duration.ofSeconds(5);
 		this.logger = logger;
 
@@ -66,35 +80,12 @@ public class DevServerStart implements ReloadableServer {
 				.map((v) -> ignoringExc(() -> (Hook) Class.forName(v).newInstance())).toList();
 
 		var proxyClientProvider = new SimpleProxyClientProvider(URI.create("http://localhost:8080"));
-		var handler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404);
-		server = Undertow.builder().addHttpListener(9000, "localhost").setHandler(new HttpHandler() {
-			@Override
-			public void handleRequest(HttpServerExchange httpServerExchange) throws Exception {
-				var reloadResult = buildLink.reload();
-				if (reloadResult instanceof ClassLoader) {// New application classes
-					stopInternal();
-					startInternal((ClassLoader) reloadResult);
-					// reload();
-				} else if (reloadResult == null) {// No change in the application classes
-					;
-				} else if (reloadResult instanceof Throwable) {
-					// case NonFatal(t) => Failure(t) // An error we can display
-					// case t: Throwable => throw t // An error that we can't handle
-					throw new RuntimeException((Throwable) reloadResult);
-				}
+		var proxyHandler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404, false, false,
+				/* retries */ 5);
 
-				httpServerExchange.setRelativePath(httpServerExchange.getRequestPath());
-				if (!isTcpPortAvailable(8080)) {
-					handler.handleRequest(httpServerExchange);
-				} else {
-					logger.info("Waiting for the server to become available ...");
-					while (isTcpPortAvailable(8080)) {
-						Thread.sleep(1000L);
-					}
-					handler.handleRequest(httpServerExchange);
-				}
-			}
-		}).build();
+		var handler = new ReloadHandler(this, proxyHandler);
+
+		server = Undertow.builder().addHttpListener(9000, "localhost").setHandler(handler).build();
 
 		server.start();
 	}
@@ -107,10 +98,13 @@ public class DevServerStart implements ReloadableServer {
 				Class<?> clazz = classLoader.loadClass(mainClass);
 				var mainMethod = clazz.getMethod("main", String[].class);
 				mainMethod.invoke(null, (Object) new String[0]);
+				System.out.println("Invoked main");
 			} catch (Exception e) {
 				if (e.getCause() instanceof InterruptedException) {
+					System.out.println("Application thread was interrupted");
 					logger.info("Application thread was interrupted");
 				} else {
+					System.out.println("Failed to invoke main");
 					logger.error("Failed to invoke main method on " + mainClass + ".");
 					stopInternal();
 					throw new RuntimeException(e);
@@ -122,6 +116,7 @@ public class DevServerStart implements ReloadableServer {
 
 	private synchronized void stopInternal() {
 		if (appThread != null) {
+			System.out.println("Stopping " + mainClass);
 			logger.info("Stopping " + mainClass);
 			appThread.interrupt();
 
@@ -130,6 +125,7 @@ public class DevServerStart implements ReloadableServer {
 			try {
 				appThread.join(shutdownPollingInterval.toMillis());
 				while (appThread.isAlive()) {
+					System.out.println("Application thread is still running after interrupt.");
 					logger.warn("Application thread is still running after interrupt.");
 					appThread.join(shutdownPollingInterval.toMillis());
 				}
@@ -140,11 +136,13 @@ public class DevServerStart implements ReloadableServer {
 		}
 
 		if (classLoader != null) {
+			System.out.println("Cleaning up old instances");
 			logger.info("Cleaning up old instances");
 			if (classLoader instanceof Closeable) {
 				try {
 					((Closeable) classLoader).close();
 				} catch (Exception e) {
+					System.out.println("Failed to close class loader: " + e.getMessage());
 					logger.error("Failed to close class loader: " + e.getMessage());
 				}
 			}
@@ -160,9 +158,31 @@ public class DevServerStart implements ReloadableServer {
 	}
 
 	@Override
-	public void reload() {
-		// stopInternal();
-		// startInternal();
+	public boolean reload() {
+		var reloadResult = buildLink.reload();
+		if (reloadResult instanceof ClassLoader) {// New application classes
+			System.out.println("Reloading!");
+			isRestarting.set(true);
+			try {
+				stopInternal();
+				startInternal((ClassLoader) reloadResult);
+			} finally {
+				isRestarting.set(false);
+			}
+			System.out.println("Finished reloading");
+			return true;
+		} else if (reloadResult == null) {// No change in the application classes
+			System.out.println("No change in the application classes");
+			return false;
+		} else if (reloadResult instanceof Throwable) {
+			// case NonFatal(t) => Failure(t) // An error we can display
+			// case t: Throwable => throw t // An error that we can't handle
+			System.out.println("Error! " + reloadResult);
+			var x = (Throwable) reloadResult;
+			x.printStackTrace();
+			throw new RuntimeException((Throwable) reloadResult);
+		}
+		return false;
 	}
 
 }

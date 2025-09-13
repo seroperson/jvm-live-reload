@@ -33,6 +33,7 @@ object LiveReloadPlugin extends AutoPlugin {
         null.asInstanceOf[LoggerProxy]
       )
     },
+    liveInteractionMode := PlayConsoleInteractionMode,
     liveAssetsClassLoader := { (parent: ClassLoader) =>
       parent
     },
@@ -58,6 +59,7 @@ object LiveReloadPlugin extends AutoPlugin {
     liveShutdownHooks := Seq(
       "me.seroperson.reload.live.hook.ZioHttpShutdownHook"
     ),
+    Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.evaluated,
     Compile / run / mainClass := Some(
       "me.seroperson.reload.live.webserver.DevServerStart"

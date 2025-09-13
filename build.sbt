@@ -36,6 +36,7 @@ lazy val `sbt-live-reload` = (project in file("sbt"))
     name := "sbt-live-reload",
     description := "Providing an universal Live Reload expirience for web applications built with SBT",
     sbtPlugin := true,
+    // scripted / logLevel := Level.Debug,
     scriptedBufferLog := false
   )
   .dependsOn(`build-link`)

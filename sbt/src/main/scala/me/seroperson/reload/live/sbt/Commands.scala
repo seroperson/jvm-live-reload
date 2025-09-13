@@ -8,6 +8,7 @@ import me.seroperson.reload.live.runner.DevServerRunner
 import sbt._
 import sbt.Keys._
 import sbt.internal.inc.Analysis
+import sbt.util.LoggerContext
 
 object Commands {
 
@@ -17,119 +18,142 @@ object Commands {
     liveCompileEverything.value.reduceLeft(_ ++ _)
   }
 
-  val liveDefaultRunTask =
-    Def.inputTask {
-      import scala.collection.JavaConverters._
+  val liveDefaultRunTask = liveRunTask(None)
 
-      val interactionMode: Option[PlayInteractionMode] = None
-      val args = Def.spaceDelimited().parsed
+  def liveRunTask(interactionArg: Option[PlayInteractionMode]) = Def.inputTask {
+    import scala.collection.JavaConverters._
 
-      val sbtLog = streams.value.log
-      val sbtState = state.value
-      val scope = resolvedScoped.value.scope
-      val interaction = interactionMode.getOrElse(
-        PlayConsoleInteractionMode
-      )
+    val args = Def.spaceDelimited().parsed
 
-      val reloadCompile: Supplier[CompileResult] = () => {
-        // This code and the below Project.runTask(...) run outside of a user-called sbt command/task.
-        // It gets called much later, by code, not by user, when a request comes in which causes Play to re-compile.
-        // Since sbt 1.8.0 a LoggerContext closes after command/task that was run by a user is finished.
-        // Therefore we need to wrap this code with a new, open LoggerContext.
-        // See https://github.com/playframework/playframework/issues/11527
+    val sbtLog = streams.value.log
+    val sbtState = state.value
+    val scope = resolvedScoped.value.scope
+    val interaction = interactionArg.getOrElse(liveInteractionMode.value)
 
-        // var loggerContext: LoggerContext = null
-        try {
-          val newState = interaction match {
-            case _: PlayNonBlockingInteractionMode =>
-              /*loggerContext = LoggerContext(useLog4J =
-              state.get(Keys.useLog4J.key).getOrElse(false)
+    val reloadCompile: Supplier[CompileResult] = () => {
+      // This code and the below Project.runTask(...) run outside of a user-called sbt command/task.
+      // It gets called much later, by code, not by user, when a request comes in which causes Play to re-compile.
+      // Since sbt 1.8.0 a LoggerContext closes after command/task that was run by a user is finished.
+      // Therefore we need to wrap this code with a new, open LoggerContext.
+      // See https://github.com/playframework/playframework/issues/11527
+
+      var loggerContext: LoggerContext = null
+      try {
+        val newState = interaction match {
+          case _: PlayNonBlockingInteractionMode =>
+            loggerContext = SbtLoggerContextAccess(useLog4J =
+              true // sbtState.get(sbt.Keys.useLog4J.key).getOrElse(false)
             )
-            state.put(Keys.loggerContext, loggerContext)*/
-              sbtState
-            case _ => sbtState
-          }
-          PlayReload.compile(
-            reloadCompile =
-              () => Project.runTask(scope / liveReload, newState).map(_._2).get,
-            classpath = () =>
-              Project
-                .runTask(
-                  scope / liveReloaderClasspath,
-                  newState // .put(WebKeys.disableExportedProducts, true)
-                )
-                .map(_._2)
-                .get,
-            streams = () =>
-              Project
-                .runTask(scope / streamsManager, newState)
-                .map(_._2)
-                .get
-                .toEither
-                .right
-                .toOption,
-            newState,
-            scope
-          )
-        } finally {
-          /*interaction match {
+            sbtState.put(
+              SbtLoggerContextAccess.loggerContextKey,
+              loggerContext
+            )
+          case _ =>
+            sbtState
+        }
+        PlayReload.compile(
+          reloadCompile =
+            () => Project.runTask(scope / liveReload, newState).map(_._2).get,
+          classpath = () =>
+            Project
+              .runTask(
+                scope / liveReloaderClasspath,
+                newState // .put(WebKeys.disableExportedProducts, true)
+              )
+              .map(_._2)
+              .get,
+          streams = () => {
+            Project
+              .runTask(scope / streamsManager, newState)
+              .map(_._2)
+              .get
+              .toEither
+              .right
+              .toOption
+          },
+          newState,
+          scope
+        )
+      } finally {
+        interaction match {
           case _: PlayNonBlockingInteractionMode => loggerContext.close()
           case _                                 => // no-op
-        }*/
         }
-
       }
 
-      lazy val devModeServer = DevServerRunner.getInstance.run(
-        /* javaOptions */ (Runtime / javaOptions).value.asJava,
-        /* commonClassLoader */ liveCommonClassloader.value,
-        /* dependencyClasspath */ liveDependencyClasspath.value.files.asJava,
-        /* reloadCompile */ reloadCompile,
-        /* assetsClassLoader */ liveAssetsClassLoader.value.apply,
-        /* triggerReload */ null,
-        // avoid monitoring same folder twice or folders that don't exist
-        /* monitoredFiles */ liveMonitoredFiles.value.asJava,
-        /* fileWatchService */ liveFileWatchService.value,
-        /* devSettings */ liveDevSettings.value.toMap.asJava,
-        /* args */ args.asJava,
-        /* mainClassName */ (Compile / run / mainClass).value.get,
-        /* internalMainClassName */ (Compile / mainClass).value.get,
-        /* reloadLock */ LiveReloadPlugin,
-        /* shutdownHookClasses */ liveShutdownHooks.value.asJava,
-        /* logger */ new SbtBuildLogger(sbtLog)
-      )
-
-      val serverDidStart = interaction match {
-        case nonBlocking: PlayNonBlockingInteractionMode =>
-          nonBlocking.start(devModeServer)
-        case _ =>
-          devModeServer
-
-          import scala.Console.{GREEN, UNDERLINED, RESET, YELLOW}
-
-          sbtLog.info(
-            s"🎉 Development Live Reload server successfully started!"
-          )
-          sbtLog.info(
-            s"🚀 Serving at:    ${GREEN}http://localhost:9000${RESET}"
-          )
-          sbtLog.info(
-            s"   Proxifying to: ${GREEN}http://localhost:8080${RESET}"
-          )
-          sbtLog.info(
-            s"ℹ️ Perform a first request to start the underlying server"
-          )
-          sbtLog.info(s"   Use ${UNDERLINED}Enter${RESET} to stop and exit")
-
-          try {
-            interaction.waitForCancel()
-          } finally {
-            devModeServer.close()
-          }
-          true
-      }
-      (interaction, serverDidStart)
     }
+
+    lazy val devModeServer = DevServerRunner.getInstance.run(
+      /* javaOptions */ (Runtime / javaOptions).value.asJava,
+      /* commonClassLoader */ liveCommonClassloader.value,
+      /* dependencyClasspath */ liveDependencyClasspath.value.files.asJava,
+      /* reloadCompile */ reloadCompile,
+      /* assetsClassLoader */ liveAssetsClassLoader.value.apply,
+      /* triggerReload */ null,
+      // avoid monitoring same folder twice or folders that don't exist
+      /* monitoredFiles */ liveMonitoredFiles.value.asJava,
+      /* fileWatchService */ liveFileWatchService.value,
+      /* devSettings */ liveDevSettings.value.toMap.asJava,
+      /* args */ args.asJava,
+      /* mainClassName */ (Compile / run / mainClass).value.get,
+      /* internalMainClassName */ (Compile / mainClass).value.get,
+      /* reloadLock */ LiveReloadPlugin,
+      /* shutdownHookClasses */ liveShutdownHooks.value.asJava,
+      /* logger */ new SbtBuildLogger(sbtLog)
+    )
+
+    val serverDidStart = interaction match {
+      case nonBlocking: PlayNonBlockingInteractionMode =>
+        nonBlocking.start(devModeServer)
+      case _ =>
+        devModeServer
+
+        import scala.Console.{GREEN, UNDERLINED, RESET, YELLOW}
+
+        sbtLog.info(
+          s"🎉 Development Live Reload server successfully started!"
+        )
+        sbtLog.info(
+          s"🚀 Serving at:    ${GREEN}http://localhost:9000${RESET}"
+        )
+        sbtLog.info(
+          s"   Proxifying to: ${GREEN}http://localhost:8080${RESET}"
+        )
+        sbtLog.info(
+          s"ℹ️ Perform a first request to start the underlying server"
+        )
+        sbtLog.info(s"   Use ${UNDERLINED}Enter${RESET} to stop and exit")
+
+        try {
+          interaction.waitForCancel()
+        } finally {
+          devModeServer.close()
+        }
+        true
+    }
+    (interaction, serverDidStart)
+  }
+
+  val liveBgRunTask = Def.inputTask {
+    bgJobService.value.runInBackground(resolvedScoped.value, state.value) {
+      (logger, workingDir) =>
+        liveRunTask(
+          Some(StaticPlayNonBlockingInteractionMode)
+        ).evaluated match {
+          case (mode: PlayNonBlockingInteractionMode, serverDidStart) =>
+            if (serverDidStart) {
+              try {
+                Thread.sleep(
+                  Long.MaxValue
+                ) // Sleep "forever" ;), gets interrupted by "bgStop <id>"
+              } catch {
+                case _: InterruptedException =>
+                  mode.stop() // shutdown dev server
+              }
+            }
+        }
+    }
+  }
 
   val liveCommonClassloaderTask = Def.task {
     val classpath = (Compile / dependencyClasspath).value

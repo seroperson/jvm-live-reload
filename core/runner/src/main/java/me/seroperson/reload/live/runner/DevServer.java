@@ -7,6 +7,5 @@ import me.seroperson.reload.live.build.BuildLink;
 public interface DevServer extends Closeable {
 	BuildLink buildLink();
 
-	/** Reloads the application. */
-	void reload();
+	boolean reload();
 }

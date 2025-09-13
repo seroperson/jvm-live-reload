@@ -42,7 +42,12 @@ object PlayReload {
       classpath.files.asJava
     )
     compileResult.left
-      .map(inc => new CompileFailure(new Throwable("Error")))
+      .map(inc => {
+        System.out.println("Error during compiling: " + inc);
+        System.out.println("Error during compiling: " + inc.message);
+        inc.directCause.map(_.printStackTrace())
+        new CompileFailure(new Throwable("Error"))
+      })
       .merge
   }
 

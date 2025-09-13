@@ -6,6 +6,6 @@ public interface ReloadableServer {
 	/** Stop the server. */
 	void stop();
 
-	/** Reload the server if necessary. */
-	void reload();
+	/** Reload the server if necessary. Returns true if was reloaded. */
+	boolean reload();
 }

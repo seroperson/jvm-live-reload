@@ -15,6 +15,8 @@ object Keys {
   val liveFileWatchService =
     settingKey[FileWatchService]("The watch service to catch file changes.")
 
+  val liveInteractionMode = settingKey[PlayInteractionMode]("")
+
   val liveStartupHooks = settingKey[Seq[String]]("Startup hooks")
   val liveShutdownHooks = settingKey[Seq[String]]("Shutdown hooks")
 

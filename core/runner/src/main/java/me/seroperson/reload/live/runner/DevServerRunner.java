@@ -121,14 +121,17 @@ public final class DevServerRunner {
 					settings, shutdownHookClasses, logger);
 
 			return new DevServer() {
+				@Override
 				public BuildLink buildLink() {
 					return reloader;
 				}
 
-				public void reload() {
-					server.reload();
+				@Override
+				public boolean reload() {
+					return server.reload();
 				}
 
+				@Override
 				public void close() {
 					server.stop();
 					reloader.close();
@@ -141,6 +144,8 @@ public final class DevServerRunner {
 			};
 		} catch (Throwable e) {
 			reloader = null;
+			System.out.println("Exception " + e);
+			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
 	}
