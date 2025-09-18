@@ -7,7 +7,7 @@ import me.seroperson.reload.live.settings.DevServerSettings
 
 class IoAppStartupHook extends Hook {
 
-  override def description: String = "Starts an cats.effect.IOApp"
+  override def description: String = "Starts a cats.effect.IOApp"
 
   override def isAvailable: Boolean =
     ReflectionUtils.hasClass("cats.effect.IOApp$")

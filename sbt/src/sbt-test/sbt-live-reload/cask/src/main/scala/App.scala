@@ -1,9 +1,8 @@
-
 object App extends cask.MainRoutes {
 
   @cask.get("/greet")
   def greet() = {
-    "World"
+    "Hello World"
   }
 
   @cask.get("/health")

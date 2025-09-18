@@ -69,12 +69,16 @@ public class DevServerStart implements ReloadableServer {
     shutdownHooks.stream().map((v) -> "- " + v.getClass().getSimpleName() + ": " + v.description())
         .forEach(logger::info);
 
-    var proxyClientProvider = new ReloadableProxyClient(
+    if (!settings.isDebug()) {
+      silenceJboss();
+    }
+
+    var proxyClientProvider = new ReloadableProxyClient(logger,
         URI.create("http://" + settings.getHttpHost() + ":" + settings.getHttpPort()));
     var proxyHandler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404,
         false, false, /* retries */ 2);
 
-    var handler = new ReloadHandler(this, proxyHandler);
+    var handler = new ReloadHandler(logger, this, proxyHandler);
 
     server =
         Undertow.builder().addHttpListener(settings.getProxyHttpPort(), settings.getProxyHttpHost())
@@ -86,12 +90,12 @@ public class DevServerStart implements ReloadableServer {
     try {
       return (Hook) Class.forName(className).newInstance();
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      logger.error("Unable to initialize hook: " + className);
+      logger.error("Unable to initialize hook: " + className, e);
       return null;
     }
   }
 
-  private void startInternal(ClassLoader classLoader) {
+  private synchronized void startInternal(ClassLoader classLoader) {
     this.classLoader = classLoader;
     this.appThread = new Thread(() -> {
       Thread.currentThread().setName("main");
@@ -104,7 +108,7 @@ public class DevServerStart implements ReloadableServer {
         if (e.getCause() instanceof InterruptedException) {
           logger.debug("Application thread was interrupted");
         } else {
-          logger.error("Failed to invoke main method on " + mainClass + ".");
+          logger.error("Failed to invoke main method on " + mainClass, e);
           stopInternal();
           throw new RuntimeException(e);
         }
@@ -131,7 +135,7 @@ public class DevServerStart implements ReloadableServer {
         try {
           ((Closeable) classLoader).close();
         } catch (Exception e) {
-          logger.error("Failed to close class loader: " + e.getMessage());
+          logger.error("Failed to close class loader", e);
         }
       }
       classLoader = null;
@@ -174,6 +178,23 @@ public class DevServerStart implements ReloadableServer {
       throw new RuntimeException((Throwable) reloadResult);
     }
     return false;
+  }
+
+  // Shameful copy-n-paste from cask.main.Main.silenceJboss
+  private void silenceJboss() {
+    // Some jboss classes litter logs from their static initializers. This is a
+    // workaround to stop this rather annoying behavior.
+    var tmp = System.out;
+    System.setOut(null);
+    org.jboss.threads.Version.getVersionString(); // this causes the static initializer to be run
+    System.setOut(tmp);
+
+    // Other loggers print way too much information. Set them to only print
+    // interesting stuff.
+    var level = java.util.logging.Level.WARNING;
+    java.util.logging.Logger.getLogger("org.jboss").setLevel(level);
+    java.util.logging.Logger.getLogger("org.xnio").setLevel(level);
+    java.util.logging.Logger.getLogger("io.undertow").setLevel(level);
   }
 
 }

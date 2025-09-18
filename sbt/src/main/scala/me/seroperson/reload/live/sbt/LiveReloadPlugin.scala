@@ -64,6 +64,7 @@ object LiveReloadPlugin extends AutoPlugin {
     liveShutdownHooks := Seq(
       HookIoAppShutdown,
       HookZioAppShutdown,
+      HookCaskShutdown,
       HookRestApiHealthCheckShutdown
       // HookTcpPortHealthCheckShutdown
     ),

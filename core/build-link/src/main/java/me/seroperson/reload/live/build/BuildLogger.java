@@ -8,6 +8,10 @@ public interface BuildLogger {
 
   void warn(String message);
 
+  void error(Throwable t);
+
+  void error(String message, Throwable t);
+
   void error(String message);
 
 }

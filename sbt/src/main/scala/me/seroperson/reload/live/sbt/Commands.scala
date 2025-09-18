@@ -104,7 +104,7 @@ object Commands {
       /* reloadLock */ LiveReloadPlugin,
       /* startupHookClasses */ liveStartupHooks.value.asJava,
       /* shutdownHookClasses */ liveShutdownHooks.value.asJava,
-      /* logger */ new SbtBuildLogger(sbtLog)
+      /* logger */ new SbtBuildLogger(settings, sbtLog)
     )
 
     val serverDidStart = interaction match {

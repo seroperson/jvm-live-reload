@@ -10,7 +10,7 @@ import me.seroperson.reload.live.settings.DevServerSettings
 
 class IoAppEffectShutdownHook extends Hook {
 
-  override def description: String = "Shutdown an cats.effect.IOApp"
+  override def description: String = "Shutdown a cats.effect.IOApp"
 
   override def isAvailable: Boolean =
     ReflectionUtils.hasClass("cats.effect.IOApp$")
@@ -19,7 +19,6 @@ class IoAppEffectShutdownHook extends Hook {
     val allCollectedRuntimes =
       IORuntime.allRuntimes.unsafeHashtable().filter(_ != null).collect {
         case runtime: IORuntime =>
-          println("Shutting down " + runtime)
           runtime.shutdown()
           runtime
       }

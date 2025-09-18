@@ -33,8 +33,6 @@ public final class DevServerRunner {
     // Set Java system properties
     // settings.getMergedProperties().forEach(System::setProperty);
 
-    System.out.println();
-
     /*
      * We need to do a bit of classloader magic to run the application.
      *
@@ -93,11 +91,6 @@ public final class DevServerRunner {
       // hooks ran
       var assetsLoader = assetsClassLoader.apply(applicationLoader);
 
-      // Need to initialize the reloader _after_ (!) the beforeStarted run hooks ran,
-      // because the DevServerReloader constructor eagerly initializes and already starts a file
-      // watch service
-      // (Originally this was Scala code, where reloader was defined lazy and wasn't
-      // accessed (and therefore initialized) before creating the ReloadableServer below)
       reloader = new DevServerReloader(assetsLoader, reloadCompile, triggerReload, monitoredFiles,
           fileWatchService, reloadLock);
 
@@ -131,8 +124,7 @@ public final class DevServerRunner {
       };
     } catch (Throwable e) {
       reloader = null;
-      System.out.println("Exception " + e);
-      e.printStackTrace();
+      logger.error("Error during proxy server initialization", e);
       throw new RuntimeException(e);
     }
   }

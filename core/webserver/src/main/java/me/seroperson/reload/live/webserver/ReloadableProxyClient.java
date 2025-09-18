@@ -18,9 +18,11 @@ import java.net.URI;
 import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
 
+import me.seroperson.reload.live.build.BuildLogger;
+
 /**
- * Initially it was the SimpleProxyClientProvider, but we had to tweak it a little to support
- * reconnection after reload.
+ * Initially it was the SimpleProxyClientProvider from undertow library, but we had to tweak it a
+ * little to support reconnection after reload.
  */
 public class ReloadableProxyClient implements ProxyClient {
 
@@ -28,11 +30,13 @@ public class ReloadableProxyClient implements ProxyClient {
   private final AttachmentKey<ClientConnection> clientAttachmentKey =
       AttachmentKey.create(ClientConnection.class);
   private final UndertowClient client;
+  private final BuildLogger logger;
 
   private static final ProxyTarget TARGET = new ProxyTarget() {};
 
-  public ReloadableProxyClient(URI uri) {
+  public ReloadableProxyClient(BuildLogger logger, URI uri) {
     this.uri = uri;
+    this.logger = logger;
     client = UndertowClient.getInstance();
   }
 
@@ -48,15 +52,12 @@ public class ReloadableProxyClient implements ProxyClient {
     if (existing != null) {
       if (existing.isOpen()) {
         var wasReloaded = exchange.getAttachment(ReloadHandler.WAS_RELOADED);
-        System.out.println("Inside of ReloadableProxy. wasReloaded: " + wasReloaded);
         if (wasReloaded != null && wasReloaded) {
-          System.out.println("Inside of ReloadableProxy. Closing existing connection");
+          logger.debug("Closing existing proxy connection");
           IoUtils.safeClose(existing);
           client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(),
               exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
           exchange.removeAttachment(ReloadHandler.WAS_RELOADED);
-          System.out.println(
-              "Inside of ReloadableProxy. Created new connection and removed was_reloaded flag");
         } else {
           // this connection already has a client, re-use it
           callback.completed(exchange,

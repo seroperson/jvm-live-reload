@@ -24,6 +24,8 @@ object LiveKeys {
 
   val HookIoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
   val HookZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
+  val HookCaskShutdown = "me.seroperson.reload.live.hook.cask.CaskShutdownHook"
+  val HookRuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
   val HookRestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
   val HookTcpPortHealthCheckShutdown = "me.seroperson.reload.live.hook.TcpPortHealthCheckShutdownHook"
   // format: on

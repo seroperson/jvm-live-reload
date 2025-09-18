@@ -1,11 +1,14 @@
-import cats.effect.{IO, IOApp, Async, Sync}
+import cats.effect.Async
+import cats.effect.IO
+import cats.effect.IOApp
+import cats.effect.Sync
 import cats.syntax.all._
 import com.comcast.ip4s._
+import org.http4s._
+import org.http4s.dsl.Http4sDsl
+import org.http4s.dsl.io._
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._
-import org.http4s._
-import org.http4s.dsl.io._
-import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats._
 
 object App extends IOApp.Simple {
@@ -17,11 +20,11 @@ object App extends IOApp.Simple {
   implicit val logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
   def helloWorldRoutes[F[_]: Sync]: HttpRoutes[F] = {
-    val dsl = new Http4sDsl[F]{}
+    val dsl = new Http4sDsl[F] {}
     import dsl._
     HttpRoutes.of[F] {
       case GET -> Root / "greet" =>
-        Ok("Hello World")
+        Ok("Hello Worldaax")
       case GET -> Root / "health" =>
         Ok()
     }
@@ -31,7 +34,8 @@ object App extends IOApp.Simple {
     val httpApp = helloWorldRoutes[F].orNotFound
     for {
       _ <-
-        EmberServerBuilder.default[F]
+        EmberServerBuilder
+          .default[F]
           .withHost(ipv4"0.0.0.0")
           .withPort(port"8080")
           .withHttpApp(httpApp)

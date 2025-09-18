@@ -2,6 +2,8 @@ lazy val scala212 = "2.12.20"
 lazy val scala213 = "2.13.16"
 lazy val supportedScalaVersions = List(scala212, scala213)
 
+ThisBuild / scalaVersion := scala212
+
 lazy val publishSettings = Seq(
   version := "0.0.1",
   organization := "me.seroperson",
@@ -29,6 +31,12 @@ lazy val publishSettings = Seq(
   publishArtifact in (Compile, packageDoc) := false
 )
 
+lazy val javaProjectSettings = Seq(
+  crossScalaVersions := List(scala212),
+  crossPaths := false,
+  autoScalaLibrary := false
+)
+
 lazy val root = (project in file("."))
   .settings(publish / skip := true)
   .settings(crossScalaVersions := Nil)
@@ -48,12 +56,10 @@ lazy val `sbt-live-reload` = (project in file("sbt"))
 
 lazy val `webserver` = (project in file("core/webserver"))
   .settings(publishSettings)
+  .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-webserver",
     description := "Development-mode webserver for Live Reload expirience on JVM",
-    crossScalaVersions := List(scala213),
-    crossPaths := false,
-    autoScalaLibrary := false,
     libraryDependencies ++= Seq(
       "io.undertow" % "undertow-core" % "2.1.0.Final"
     )
@@ -62,6 +68,7 @@ lazy val `webserver` = (project in file("core/webserver"))
 
 lazy val `runner` = (project in file("core/runner"))
   .settings(publishSettings)
+  .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-runner",
     description := "Runner",
@@ -74,7 +81,6 @@ lazy val `hooks` = (project in file("core/hooks"))
   .settings(
     name := "jvm-live-reload-hooks",
     description := "Hooks",
-    scalaVersion := scala213,
     crossScalaVersions := List(scala212, scala213),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-http" % "3.3.3" % Provided,
@@ -85,10 +91,8 @@ lazy val `hooks` = (project in file("core/hooks"))
 
 lazy val `build-link` = (project in file("core/build-link"))
   .settings(publishSettings)
+  .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-build-link",
-    description := "Build link",
-    crossScalaVersions := List(scala213),
-    crossPaths := false,
-    autoScalaLibrary := false
+    description := "Build link"
   )

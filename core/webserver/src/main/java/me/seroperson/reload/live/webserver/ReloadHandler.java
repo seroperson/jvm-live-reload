@@ -1,5 +1,6 @@
 package me.seroperson.reload.live.webserver;
 
+import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.build.BuildLink;
 
@@ -20,8 +21,10 @@ public class ReloadHandler implements HttpHandler {
 
   private final ReloadableServer server;
   private final HttpHandler next;
+  private final BuildLogger logger;
 
-  public ReloadHandler(ReloadableServer server, HttpHandler next) {
+  public ReloadHandler(BuildLogger logger, ReloadableServer server, HttpHandler next) {
+    this.logger = logger;
     this.server = server;
     this.next = next;
   }
@@ -34,38 +37,10 @@ public class ReloadHandler implements HttpHandler {
       httpServerExchange.setRelativePath(httpServerExchange.getRequestPath());
       httpServerExchange.putAttachment(WAS_RELOADED, wasReloaded);
 
-      System.out.println("Was reloaded: " + wasReloaded);
-
       next.handleRequest(httpServerExchange);
     } catch (Throwable e) {
-      System.out.println("Catch exception " + e);
-      e.printStackTrace();
+      logger.error("Error during reloading", e);
     }
   }
 
-  private boolean isHealthy(String host, int port)
-      throws URISyntaxException, IOException, InterruptedException {
-    try {
-      HttpClient client = HttpClient.newHttpClient();
-      HttpRequest request = HttpRequest.newBuilder()
-          .uri(new URI("http://" + host + ":" + port + "/health")).GET().build();
-      return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
-  public static class Wrapper implements HandlerWrapper {
-
-    private ReloadableServer server;
-
-    public Wrapper(ReloadableServer server) {
-      this.server = server;
-    }
-
-    @Override
-    public HttpHandler wrap(HttpHandler handler) {
-      return new ReloadHandler(server, handler);
-    }
-  }
 }
