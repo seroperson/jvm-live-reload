@@ -1,18 +1,15 @@
-import java.nio.file.Files
+/*import java.nio.file.Files
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
-
+import sbt._
+import sbt.Keys._
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.sys.process.Process
-
-import sbt._
-import sbt.Keys._
-
 
 def check(
     log: sbt.internal.util.ManagedLogger,
@@ -55,8 +52,10 @@ def check(
   c.setRequestMethod("GET")
   c.setDoOutput(false)
 
+  println("Before get response code")
   val obtainedStatus: Int =
     c.getResponseCode()
+  println(s"After get response code: ${obtainedStatus}")
 
   val obtainedBody: String =
     try {
@@ -71,13 +70,13 @@ def check(
             x.printStackTrace()
             ""
         }
-      /*case t @ _ =>
+      case t @ _ =>
         println("Error body " + t)
         t.printStackTrace()
-        ""*/
-    }/* finally {
+        ""
+    } finally {
       println("Finally in body reading")
-    }*/
+    }
 
   val statusMatch: Boolean =
     expectedStatus == obtainedStatus
@@ -156,5 +155,20 @@ lazy val root = (project in file("."))
       val path :: status :: assertions = args
 
       check(streams.value.log, 9000, path, status.toInt, assertions.headOption)
-    },
+    }
+  )*/
+
+lazy val root = (project in file("."))
+  .enablePlugins(LiveReloadPlugin)
+  .settings(
+    resolvers += Resolver.mavenLocal,
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-http" % "3.3.3",
+      "org.slf4j" % "slf4j-simple" % "2.0.16"
+    ),
+    InputKey[Unit]("verifyResourceContains") := {
+      val args = Def.spaceDelimited("<path> <status> <words> ...").parsed
+      val path :: status :: assertions = args
+      ScriptedTools.verifyResourceContains(path, status.toInt, assertions)
+    }
   )

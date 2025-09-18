@@ -8,14 +8,23 @@ import sbt.internal.inc.Analysis
 import sbt.settingKey
 import sbt.taskKey
 
-object Keys {
+object LiveKeys {
 
   type ClassLoaderCreator = (String, Array[URL], ClassLoader) => ClassLoader
 
   val liveFileWatchService =
     settingKey[FileWatchService]("The watch service to catch file changes.")
 
-  val liveInteractionMode = settingKey[PlayInteractionMode]("")
+  val liveInteractionMode = settingKey[InteractionMode]("")
+
+  // format: off
+  val HookIoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
+  val HookRestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
+
+  val HookIoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
+  val HookZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
+  val HookRestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
+  // format: on
 
   val liveStartupHooks = settingKey[Seq[String]]("Startup hooks")
   val liveShutdownHooks = settingKey[Seq[String]]("Shutdown hooks")
@@ -32,6 +41,7 @@ object Keys {
   val liveReloaderClasspath = taskKey[Classpath](
     "The application classpath, containing all projects in this build that are dependencies of this project, including this project."
   )
+
   val liveCommonClassloader = taskKey[ClassLoader](
     "The common classloader, is used to hold H2 to ensure in memory databases don't get lost between invocations of run."
   )

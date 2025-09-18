@@ -5,10 +5,12 @@ import java.nio.file.Path
 import java.util.function.Supplier
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
+import me.seroperson.reload.live.settings.DevServerSettings
 import sbt._
 import sbt.Keys._
 import sbt.internal.inc.Analysis
 import sbt.util.LoggerContext
+import scala.collection.JavaConverters._
 
 object Commands {
 
@@ -20,7 +22,7 @@ object Commands {
 
   val liveDefaultRunTask = liveRunTask(None)
 
-  def liveRunTask(interactionArg: Option[PlayInteractionMode]) = Def.inputTask {
+  def liveRunTask(interactionArg: Option[InteractionMode]) = Def.inputTask {
     import scala.collection.JavaConverters._
 
     val args = Def.spaceDelimited().parsed
@@ -32,7 +34,7 @@ object Commands {
 
     val reloadCompile: Supplier[CompileResult] = () => {
       // This code and the below Project.runTask(...) run outside of a user-called sbt command/task.
-      // It gets called much later, by code, not by user, when a request comes in which causes Play to re-compile.
+      // It gets called much later, by code, not by user, when a request comes in which causes us to re-compile.
       // Since sbt 1.8.0 a LoggerContext closes after command/task that was run by a user is finished.
       // Therefore we need to wrap this code with a new, open LoggerContext.
       // See https://github.com/playframework/playframework/issues/11527
@@ -40,9 +42,9 @@ object Commands {
       var loggerContext: LoggerContext = null
       try {
         val newState = interaction match {
-          case _: PlayNonBlockingInteractionMode =>
+          case _: NonBlockingInteractionMode =>
             loggerContext = SbtLoggerContextAccess(useLog4J =
-              true // sbtState.get(sbt.Keys.useLog4J.key).getOrElse(false)
+              sbtState.get(sbt.Keys.useLog4J.key).getOrElse(false)
             )
             sbtState.put(
               SbtLoggerContextAccess.loggerContextKey,
@@ -51,59 +53,62 @@ object Commands {
           case _ =>
             sbtState
         }
-        PlayReload.compile(
-          reloadCompile =
-            () => Project.runTask(scope / liveReload, newState).map(_._2).get,
-          classpath = () =>
-            Project
-              .runTask(
-                scope / liveReloaderClasspath,
-                newState // .put(WebKeys.disableExportedProducts, true)
-              )
-              .map(_._2)
-              .get,
-          streams = () => {
-            Project
-              .runTask(scope / streamsManager, newState)
-              .map(_._2)
-              .get
-              .toEither
-              .right
-              .toOption
-          },
-          newState,
-          scope
-        )
+
+        (for {
+          analysis <- Project
+            .runTask(scope / liveReload, newState)
+            .map(_._2)
+            .get
+            .toEither
+            .right
+          classpath <- Project
+            .runTask(
+              scope / liveReloaderClasspath,
+              newState // .put(WebKeys.disableExportedProducts, true)
+            )
+            .map(_._2)
+            .get
+            .toEither
+            .right
+        } yield new CompileResult.CompileSuccess(classpath.files.asJava)).left
+          .map(inc => {
+            inc.directCause.map(_.printStackTrace())
+            new CompileResult.CompileFailure(new Throwable("Error"))
+          })
+          .merge
       } finally {
         interaction match {
-          case _: PlayNonBlockingInteractionMode => loggerContext.close()
-          case _                                 => // no-op
+          case _: NonBlockingInteractionMode => loggerContext.close()
+          case _                             => // no-op
         }
       }
-
     }
 
+    val settings = new DevServerSettings(
+      (Runtime / javaOptions).value.asJava,
+      args.asJava,
+      liveDevSettings.value.toMap.asJava
+    );
+
     lazy val devModeServer = DevServerRunner.getInstance.run(
-      /* javaOptions */ (Runtime / javaOptions).value.asJava,
+      /* settings */ settings,
       /* commonClassLoader */ liveCommonClassloader.value,
       /* dependencyClasspath */ liveDependencyClasspath.value.files.asJava,
       /* reloadCompile */ reloadCompile,
       /* assetsClassLoader */ liveAssetsClassLoader.value.apply,
       /* triggerReload */ null,
-      // avoid monitoring same folder twice or folders that don't exist
       /* monitoredFiles */ liveMonitoredFiles.value.asJava,
       /* fileWatchService */ liveFileWatchService.value,
-      /* devSettings */ liveDevSettings.value.toMap.asJava,
-      /* args */ args.asJava,
       /* mainClassName */ (Compile / run / mainClass).value.get,
       /* internalMainClassName */ (Compile / mainClass).value.get,
       /* reloadLock */ LiveReloadPlugin,
+      /* startupHookClasses */ liveStartupHooks.value.asJava,
       /* shutdownHookClasses */ liveShutdownHooks.value.asJava,
       /* logger */ new SbtBuildLogger(sbtLog)
     )
 
     val serverDidStart = interaction match {
-      case nonBlocking: PlayNonBlockingInteractionMode =>
+      case nonBlocking: NonBlockingInteractionMode =>
         nonBlocking.start(devModeServer)
       case _ =>
         devModeServer
@@ -114,10 +119,10 @@ object Commands {
           s"🎉 Development Live Reload server successfully started!"
         )
         sbtLog.info(
-          s"🚀 Serving at:    ${GREEN}http://localhost:9000${RESET}"
+          s"🚀 Serving at:    ${GREEN}http://${settings.getProxyHttpHost()}:${settings.getProxyHttpPort()}${RESET}"
         )
         sbtLog.info(
-          s"   Proxifying to: ${GREEN}http://localhost:8080${RESET}"
+          s"   Proxifying to: ${GREEN}http://${settings.getHttpHost()}:${settings.getHttpPort()}${RESET}"
         )
         sbtLog.info(
           s"ℹ️ Perform a first request to start the underlying server"
@@ -138,14 +143,14 @@ object Commands {
     bgJobService.value.runInBackground(resolvedScoped.value, state.value) {
       (logger, workingDir) =>
         liveRunTask(
-          Some(StaticPlayNonBlockingInteractionMode)
+          Some(StaticNonBlockingInteractionMode)
         ).evaluated match {
-          case (mode: PlayNonBlockingInteractionMode, serverDidStart) =>
+          case (mode: NonBlockingInteractionMode, serverDidStart) =>
             if (serverDidStart) {
               try {
                 Thread.sleep(
                   Long.MaxValue
-                ) // Sleep "forever" ;), gets interrupted by "bgStop <id>"
+                )
               } catch {
                 case _: InterruptedException =>
                   mode.stop() // shutdown dev server
@@ -170,7 +175,7 @@ object Commands {
       // because it will be polluted with the sbt launcher and dependencies of the sbt launcher.
       // See https://github.com/playframework/playframework/issues/3420 for discussion.
       val parent = ClassLoader.getSystemClassLoader.getParent
-      log.debug("Using parent loader for play common classloader: " + parent)
+      log.debug("Using parent loader for common classloader: " + parent)
 
       commonClassLoader = new java.net.URLClassLoader(
         classpath.map(_.data).collect(commonJars).toArray,
@@ -193,25 +198,6 @@ object Commands {
         )
       )
   }
-
-  /*val h2Command = Command.command("h2-browser") { (state: State) =>
-    try {
-      val commonLoader =
-        Project.runTask(playCommonClassloader, state).get._2.toEither.right.get
-      val h2ServerClass = commonLoader.loadClass("org.h2.tools.Server")
-      h2ServerClass
-        .getMethod("main", classOf[Array[String]])
-        .invoke(null, Array.empty[String])
-    } catch {
-      case _: ClassNotFoundException =>
-        state.log.error(
-          s"""|H2 Dependency not loaded, please add H2 to your Classpath!
-              |Take a look at https://www.playframework.com/documentation/${play.core.PlayVersion.current}/Developing-with-the-H2-Database#H2-database on how to do it.""".stripMargin
-        )
-      case e: Exception => e.printStackTrace()
-    }
-    state
-  }*/
 
   val liveMonitoredFilesTask = Def.taskDyn {
     val projectRef = thisProjectRef.value

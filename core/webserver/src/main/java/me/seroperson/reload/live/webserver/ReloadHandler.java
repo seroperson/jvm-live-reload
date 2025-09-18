@@ -16,62 +16,56 @@ import java.net.http.HttpClient;
 
 public class ReloadHandler implements HttpHandler {
 
-	public static final AttachmentKey<Boolean> WAS_RELOADED = AttachmentKey.create(Boolean.class);
+  public static final AttachmentKey<Boolean> WAS_RELOADED = AttachmentKey.create(Boolean.class);
 
-	private final ReloadableServer server;
-	private final HttpHandler next;
+  private final ReloadableServer server;
+  private final HttpHandler next;
 
-	public ReloadHandler(ReloadableServer server, HttpHandler next) {
-		this.server = server;
-		this.next = next;
-	}
+  public ReloadHandler(ReloadableServer server, HttpHandler next) {
+    this.server = server;
+    this.next = next;
+  }
 
-	@Override
-	public void handleRequest(HttpServerExchange httpServerExchange) throws Exception {
-		try {
-			// while (isRestarting.get()) {
-			// System.out.println("Waiting while restarting ...");
-			// Thread.sleep(1000L);
-			// }
+  @Override
+  public void handleRequest(HttpServerExchange httpServerExchange) throws Exception {
+    try {
+      var wasReloaded = server.reload();
 
-			var wasReloaded = server.reload();
-			while (!isHealthy("localhost", 8080)) {
-				Thread.sleep(250L);
-			}
-			httpServerExchange.setRelativePath(httpServerExchange.getRequestPath());
-			httpServerExchange.putAttachment(WAS_RELOADED, wasReloaded);
+      httpServerExchange.setRelativePath(httpServerExchange.getRequestPath());
+      httpServerExchange.putAttachment(WAS_RELOADED, wasReloaded);
 
-			System.out.println("Was reloaded: " + wasReloaded);
+      System.out.println("Was reloaded: " + wasReloaded);
 
-			next.handleRequest(httpServerExchange);
-		} catch (Throwable e) {
-			System.out.println("Catch exception " + e);
-			e.printStackTrace();
-		}
-	}
+      next.handleRequest(httpServerExchange);
+    } catch (Throwable e) {
+      System.out.println("Catch exception " + e);
+      e.printStackTrace();
+    }
+  }
 
-	private boolean isHealthy(String host, int port) throws URISyntaxException, IOException, InterruptedException {
-		try {
-			HttpClient client = HttpClient.newHttpClient();
-			HttpRequest request = HttpRequest.newBuilder().uri(new URI("http://" + host + ":" + port + "/health")).GET()
-					.build();
-			return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
-		} catch (Exception e) {
-			return false;
-		}
-	}
+  private boolean isHealthy(String host, int port)
+      throws URISyntaxException, IOException, InterruptedException {
+    try {
+      HttpClient client = HttpClient.newHttpClient();
+      HttpRequest request = HttpRequest.newBuilder()
+          .uri(new URI("http://" + host + ":" + port + "/health")).GET().build();
+      return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
+    } catch (Exception e) {
+      return false;
+    }
+  }
 
-	public static class Wrapper implements HandlerWrapper {
+  public static class Wrapper implements HandlerWrapper {
 
-		private ReloadableServer server;
+    private ReloadableServer server;
 
-		public Wrapper(ReloadableServer server) {
-			this.server = server;
-		}
+    public Wrapper(ReloadableServer server) {
+      this.server = server;
+    }
 
-		@Override
-		public HttpHandler wrap(HttpHandler handler) {
-			return new ReloadHandler(server, handler);
-		}
-	}
+    @Override
+    public HttpHandler wrap(HttpHandler handler) {
+      return new ReloadHandler(server, handler);
+    }
+  }
 }

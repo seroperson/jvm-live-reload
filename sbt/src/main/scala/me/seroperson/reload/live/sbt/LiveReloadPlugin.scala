@@ -8,23 +8,24 @@ import play.dev.filewatch.FileWatchService
 import play.dev.filewatch.LoggerProxy
 import sbt._
 import sbt.internal.inc.Analysis
+import sbt.plugins.JvmPlugin
 
 object LiveReloadPlugin extends AutoPlugin {
 
-  val autoImport = Keys
+  val autoImport = LiveKeys
 
   import autoImport._
   import sbt.Keys._
 
-  override def trigger = allRequirements
+  override def trigger = noTrigger
 
-  override def requires = plugins.JvmPlugin
+  override def requires = JvmPlugin
 
   override lazy val globalSettings = Seq()
 
   override lazy val projectSettings = Seq(
     libraryDependencies ++= Seq(
-      "me.seroperson" %% "jvm-live-reload-webserver" % "0.0.1"
+      "me.seroperson" % "jvm-live-reload-webserver" % "0.0.1"
     ),
     liveFileWatchService := {
       FileWatchService.defaultWatchService(
@@ -33,10 +34,8 @@ object LiveReloadPlugin extends AutoPlugin {
         null.asInstanceOf[LoggerProxy]
       )
     },
-    liveInteractionMode := PlayConsoleInteractionMode,
-    liveAssetsClassLoader := { (parent: ClassLoader) =>
-      parent
-    },
+    liveInteractionMode := ConsoleInteractionMode,
+    liveAssetsClassLoader := { (parent: ClassLoader) => parent },
     liveDevSettings := Nil,
     liveMonitoredFiles := Commands.liveMonitoredFilesTask.value,
     // all dependencies from outside the project (all dependency jars)
@@ -56,8 +55,14 @@ object LiveReloadPlugin extends AutoPlugin {
     liveReload := Commands.liveReloadTask.value,
     liveCompileEverything := Commands.liveCompileEverythingTask.value
       .asInstanceOf[Seq[Analysis]],
+    liveStartupHooks := Seq(
+      HookIoAppStartup,
+      HookRestApiHealthCheckStartup
+    ),
     liveShutdownHooks := Seq(
-      "me.seroperson.reload.live.hook.ZioHttpShutdownHook"
+      HookIoAppShutdown,
+      HookZioAppShutdown,
+      HookRestApiHealthCheckShutdown
     ),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.evaluated,

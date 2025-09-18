@@ -9,33 +9,27 @@ import java.util.Map;
 
 public interface CompileResult {
 
-	class CompileSuccess implements CompileResult {
-		private final Map<String, Source> sources;
-		private final List<File> classpath;
+  class CompileSuccess implements CompileResult {
+    private final List<File> classpath;
 
-		public CompileSuccess(Map<String, Source> sources, List<File> classpath) {
-			this.sources = requireNonNullElse(sources, Map.of());
-			this.classpath = requireNonNullElse(classpath, List.of());
-		}
+    public CompileSuccess(List<File> classpath) {
+      this.classpath = requireNonNullElse(classpath, List.of());
+    }
 
-		public Map<String, Source> getSources() {
-			return sources;
-		}
+    public List<File> getClasspath() {
+      return classpath;
+    }
+  }
 
-		public List<File> getClasspath() {
-			return classpath;
-		}
-	}
+  class CompileFailure implements CompileResult {
+    private final Throwable exception;
 
-	class CompileFailure implements CompileResult {
-		private final Throwable exception;
+    public CompileFailure(Throwable exception) {
+      this.exception = requireNonNull(exception);
+    }
 
-		public CompileFailure(Throwable exception) {
-			this.exception = requireNonNull(exception);
-		}
-
-		public Throwable getException() {
-			return exception;
-		}
-	}
+    public Throwable getException() {
+      return exception;
+    }
+  }
 }

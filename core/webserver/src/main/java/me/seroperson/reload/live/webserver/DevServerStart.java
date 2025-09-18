@@ -4,6 +4,7 @@ import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.BuildLink;
 import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.hook.Hook;
+import me.seroperson.reload.live.settings.DevServerSettings;
 
 import java.time.Duration;
 import java.io.Closeable;
@@ -19,6 +20,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Objects;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -27,162 +29,151 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
 import io.undertow.server.handlers.builder.PredicatedHandler;
+import io.undertow.server.handlers.accesslog.AccessLogHandler;
+import io.undertow.server.handlers.accesslog.JBossLoggingAccessLogReceiver;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicatesHandler;
 import io.undertow.util.AttachmentKey;
 
 public class DevServerStart implements ReloadableServer {
 
-	private Undertow server;
-	private Thread appThread;
-	private ClassLoader classLoader;
-	private String mainClass;
-	private List<Hook> shutdownHooks;
-	private AtomicBoolean isRestarting = new AtomicBoolean(false);
-	private final Duration shutdownPollingInterval;
-	private final BuildLogger logger;
-	private final BuildLink buildLink;
+  private Undertow server;
+  private Thread appThread;
 
-	public static <T> T ignoringExc(RunnableExc<T> r) {
-		try {
-			return r.run();
-		} catch (Exception e) {
-		}
-		return null;
-	}
+  private ClassLoader classLoader;
+  private String mainClass;
 
-	@FunctionalInterface
-	public interface RunnableExc<T> {
-		T run() throws Exception;
-	}
+  private List<Hook> startupHooks;
+  private List<Hook> shutdownHooks;
 
-	// https://stackoverflow.com/a/48828373/5246998
-	public static boolean isTcpPortAvailable(int port) {
-		try (ServerSocket serverSocket = new ServerSocket()) {
-			// setReuseAddress(false) is required only on macOS,
-			// otherwise the code will not work correctly on that platform
-			serverSocket.setReuseAddress(false);
-			serverSocket.bind(new InetSocketAddress(InetAddress.getByName("localhost"), port), 1);
-			return true;
-		} catch (Exception ex) {
-			return false;
-		}
-	}
+  private final DevServerSettings settings;
+  private final BuildLogger logger;
+  private final BuildLink buildLink;
 
-	public DevServerStart(BuildLink buildLink, BuildLogger logger, String mainClass, List<String> shutdownHookClasses) {
+  public DevServerStart(DevServerSettings settings, BuildLink buildLink, BuildLogger logger,
+      String mainClass, List<String> startupHookClasses, List<String> shutdownHookClasses) {
+    this.settings = settings;
+    this.mainClass = mainClass;
+    this.buildLink = buildLink;
+    this.logger = logger;
 
-		this.mainClass = mainClass;
-		this.buildLink = buildLink;
-		this.shutdownPollingInterval = Duration.ofSeconds(5);
-		this.logger = logger;
+    startupHooks = startupHookClasses.stream().map(this::initHook).filter(Objects::nonNull)
+        .filter(Hook::isAvailable).toList();
+    shutdownHooks = shutdownHookClasses.stream().map(this::initHook).filter(Objects::nonNull)
+        .filter(Hook::isAvailable).toList();
 
-		shutdownHooks = shutdownHookClasses.stream()
-				.map((v) -> ignoringExc(() -> (Hook) Class.forName(v).newInstance())).toList();
+    logger.info("Found " + startupHooks.size() + " startup hooks:");
+    startupHooks.stream().map((v) -> "- " + v.getClass().getSimpleName() + ": " + v.description())
+        .forEach(logger::info);
+    logger.info("Found " + shutdownHooks.size() + " shutdown hooks:");
+    shutdownHooks.stream().map((v) -> "- " + v.getClass().getSimpleName() + ": " + v.description())
+        .forEach(logger::info);
 
-		var proxyClientProvider = new SimpleProxyClientProvider(URI.create("http://localhost:8080"));
-		var proxyHandler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404, false, false,
-				/* retries */ 5);
+    var proxyClientProvider = new ReloadableProxyClient(
+        URI.create("http://" + settings.getHttpHost() + ":" + settings.getHttpPort()));
+    var proxyHandler = new ProxyHandler(proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404,
+        false, false, /* retries */ 2);
 
-		var handler = new ReloadHandler(this, proxyHandler);
+    var handler = new ReloadHandler(this, proxyHandler);
 
-		server = Undertow.builder().addHttpListener(9000, "localhost").setHandler(handler).build();
+    server =
+        Undertow.builder().addHttpListener(settings.getProxyHttpPort(), settings.getProxyHttpHost())
+            .setHandler(handler).build();
+    server.start();
+  }
 
-		server.start();
-	}
+  private Hook initHook(String className) {
+    try {
+      return (Hook) Class.forName(className).newInstance();
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      logger.error("Unable to initialize hook: " + className);
+      return null;
+    }
+  }
 
-	private void startInternal(ClassLoader classLoader) {
-		this.classLoader = classLoader;
-		this.appThread = new Thread(() -> {
-			Thread.currentThread().setName("main");
-			try {
-				Class<?> clazz = classLoader.loadClass(mainClass);
-				var mainMethod = clazz.getMethod("main", String[].class);
-				mainMethod.invoke(null, (Object) new String[0]);
-				System.out.println("Invoked main");
-			} catch (Exception e) {
-				if (e.getCause() instanceof InterruptedException) {
-					System.out.println("Application thread was interrupted");
-					logger.info("Application thread was interrupted");
-				} else {
-					System.out.println("Failed to invoke main");
-					logger.error("Failed to invoke main method on " + mainClass + ".");
-					stopInternal();
-					throw new RuntimeException(e);
-				}
-			}
-		});
-		appThread.start();
-	}
+  private void startInternal(ClassLoader classLoader) {
+    this.classLoader = classLoader;
+    this.appThread = new Thread(() -> {
+      Thread.currentThread().setName("main");
+      logger.info("🚀 Starting " + mainClass);
+      try {
+        Class<?> clazz = classLoader.loadClass(mainClass);
+        var mainMethod = clazz.getMethod("main", String[].class);
+        mainMethod.invoke(null, (Object) new String[0]);
+      } catch (Exception e) {
+        if (e.getCause() instanceof InterruptedException) {
+          logger.debug("Application thread was interrupted");
+        } else {
+          logger.error("Failed to invoke main method on " + mainClass + ".");
+          stopInternal();
+          throw new RuntimeException(e);
+        }
+      }
+    });
+    appThread.start();
 
-	private synchronized void stopInternal() {
-		if (appThread != null) {
-			System.out.println("Stopping " + mainClass);
-			logger.info("Stopping " + mainClass);
-			appThread.interrupt();
+    runHooks(startupHooks);
+  }
 
-			shutdownHooks.forEach((v) -> v.hook());
+  private synchronized void stopInternal() {
+    if (appThread != null) {
+      logger.info("Stopping " + mainClass);
+      appThread.interrupt();
 
-			try {
-				appThread.join(shutdownPollingInterval.toMillis());
-				while (appThread.isAlive()) {
-					System.out.println("Application thread is still running after interrupt.");
-					logger.warn("Application thread is still running after interrupt.");
-					appThread.join(shutdownPollingInterval.toMillis());
-				}
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			}
-			appThread = null;
-		}
+      runHooks(shutdownHooks);
 
-		if (classLoader != null) {
-			System.out.println("Cleaning up old instances");
-			logger.info("Cleaning up old instances");
-			if (classLoader instanceof Closeable) {
-				try {
-					((Closeable) classLoader).close();
-				} catch (Exception e) {
-					System.out.println("Failed to close class loader: " + e.getMessage());
-					logger.error("Failed to close class loader: " + e.getMessage());
-				}
-			}
-			classLoader = null;
-			System.gc();
-		}
-	}
+      appThread = null;
+    }
 
-	@Override
-	public void stop() {
-		server.stop();
-		stopInternal();
-	}
+    if (classLoader != null) {
+      logger.debug("Cleaning up old ClassLoader");
+      if (classLoader instanceof Closeable) {
+        try {
+          ((Closeable) classLoader).close();
+        } catch (Exception e) {
+          logger.error("Failed to close class loader: " + e.getMessage());
+        }
+      }
+      classLoader = null;
+      System.gc();
+    }
+  }
 
-	@Override
-	public boolean reload() {
-		var reloadResult = buildLink.reload();
-		if (reloadResult instanceof ClassLoader) {// New application classes
-			System.out.println("Reloading!");
-			isRestarting.set(true);
-			try {
-				stopInternal();
-				startInternal((ClassLoader) reloadResult);
-			} finally {
-				isRestarting.set(false);
-			}
-			System.out.println("Finished reloading");
-			return true;
-		} else if (reloadResult == null) {// No change in the application classes
-			System.out.println("No change in the application classes");
-			return false;
-		} else if (reloadResult instanceof Throwable) {
-			// case NonFatal(t) => Failure(t) // An error we can display
-			// case t: Throwable => throw t // An error that we can't handle
-			System.out.println("Error! " + reloadResult);
-			var x = (Throwable) reloadResult;
-			x.printStackTrace();
-			throw new RuntimeException((Throwable) reloadResult);
-		}
-		return false;
-	}
+  private void runHooks(List<Hook> hooks) {
+    hooks.forEach((v) -> {
+      long start = System.currentTimeMillis();
+      v.hook(settings, logger);
+      long time = System.currentTimeMillis() - start;
+      logger.debug("Running " + v.getClass().getSimpleName() + " took " + time + "ms");
+    });
+  }
+
+  @Override
+  public void stop() {
+    server.stop();
+    stopInternal();
+  }
+
+  @Override
+  public boolean reload() {
+    var reloadResult = buildLink.reload();
+    if (reloadResult instanceof ClassLoader) {
+      // New application classes
+      logger.info("🔃 Reloading an application");
+      stopInternal();
+      startInternal((ClassLoader) reloadResult);
+      logger.debug("Finished reloading");
+      return true;
+    } else if (reloadResult == null) {
+      // No change in the application classes
+      logger.debug("No change in the application classes");
+      return false;
+    } else if (reloadResult instanceof Throwable) {
+      // case NonFatal(t) => Failure(t) // An error we can display
+      // case t: Throwable => throw t // An error that we can't handle
+      throw new RuntimeException((Throwable) reloadResult);
+    }
+    return false;
+  }
 
 }

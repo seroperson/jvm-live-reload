@@ -10,10 +10,10 @@ import jline.console.ConsoleReader
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
-trait PlayInteractionMode {
+trait InteractionMode {
 
-  /** This is our means of blocking a `play run` call until the user has
-    * denoted, via some interface (console or GUI) that play should no longer be
+  /** This is our means of blocking a `run` call until the user has denoted, via
+    * some interface (console or GUI) that application should no longer be
     * running.
     */
   def waitForCancel(): Unit
@@ -28,10 +28,10 @@ trait PlayInteractionMode {
 
 /** Marker trait to signify a non-blocking interaction mode.
   *
-  * This is provided, rather than adding a new flag to PlayInteractionMode, to
+  * This is provided, rather than adding a new flag to InteractionMode, to
   * preserve binary compatibility.
   */
-trait PlayNonBlockingInteractionMode extends PlayInteractionMode {
+trait NonBlockingInteractionMode extends InteractionMode {
   override def waitForCancel() = ()
   override def doWithoutEcho(f: => Unit) = f
 
@@ -52,7 +52,7 @@ trait PlayNonBlockingInteractionMode extends PlayInteractionMode {
 
 /** Default behavior for interaction mode is to wait on JLine.
   */
-object PlayConsoleInteractionMode extends PlayInteractionMode {
+object ConsoleInteractionMode extends InteractionMode {
 
   /** This wraps the InputStream with some sleep statements so it becomes
     * interruptible. Only used in sbt versions <= 1.3
@@ -150,8 +150,7 @@ object PlayConsoleInteractionMode extends PlayInteractionMode {
 /** Simple implementation of the non-blocking interaction mode that simply
   * stores the current application in a static variable.
   */
-object StaticPlayNonBlockingInteractionMode
-    extends PlayNonBlockingInteractionMode {
+object StaticNonBlockingInteractionMode extends NonBlockingInteractionMode {
   private var current: Option[Closeable] = None
 
   /** Start the server, if not already started
