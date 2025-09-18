@@ -9,8 +9,7 @@ import me.seroperson.reload.live.build.BuildLogger;
 interface RestApiHealthCheckHook extends HealthCheckHook {
 
   default boolean isHealthy(String host, int port) {
-    try {
-      HttpClient client = HttpClient.newHttpClient();
+    try (HttpClient client = HttpClient.newHttpClient()) {
       HttpRequest request = HttpRequest.newBuilder()
           .uri(new URI("http://" + host + ":" + port + "/health")).GET().build();
       return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
