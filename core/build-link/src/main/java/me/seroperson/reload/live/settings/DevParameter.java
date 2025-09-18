@@ -42,11 +42,19 @@ public class DevParameter<T> {
 
   public T getValueOrDefault(Map<String, String> javaOptionProperties, Map<String, String> args,
       Map<String, String> pluginSettings) {
-    return getValue(javaOptionProperties, args, pluginSettings).orElse(defaultValue);
+    var value = getValue(javaOptionProperties, args, pluginSettings);
+    if (value == null)
+      return defaultValue;
+    else
+      return value.orElse(defaultValue);
   }
 
   public void putInto(Map<String, String> map) {
-    map.put(argKey, toString.apply(value.orElse(defaultValue)));
+    if (value == null) {
+      map.put(argKey, toString.apply(defaultValue));
+    } else {
+      map.put(argKey, toString.apply(value.orElse(defaultValue)));
+    }
   }
 
 }

@@ -59,7 +59,6 @@ lazy val `webserver` = (project in file("core/webserver"))
     )
   )
   .dependsOn(`build-link`)
-  .dependsOn(`hooks`)
 
 lazy val `runner` = (project in file("core/runner"))
   .settings(publishSettings)
@@ -75,6 +74,8 @@ lazy val `hooks` = (project in file("core/hooks"))
   .settings(
     name := "jvm-live-reload-hooks",
     description := "Hooks",
+    scalaVersion := scala213,
+    crossScalaVersions := List(scala212, scala213),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-http" % "3.3.3" % Provided,
       "org.typelevel" %% "cats-effect" % "3.6.3" % Provided
@@ -86,5 +87,8 @@ lazy val `build-link` = (project in file("core/build-link"))
   .settings(publishSettings)
   .settings(
     name := "jvm-live-reload-build-link",
-    description := "Build link"
+    description := "Build link",
+    crossScalaVersions := List(scala213),
+    crossPaths := false,
+    autoScalaLibrary := false
   )

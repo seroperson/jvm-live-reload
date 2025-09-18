@@ -18,6 +18,7 @@ public abstract class HealthCheckShutdownHook implements HealthCheckHook {
   @Override
   public void hook(DevServerSettings settings, BuildLogger logger) {
     try {
+      logger.debug("Starting HealthCheckShutdownHook");
       while (isHealthy(settings.getHttpHost(), settings.getHttpPort())) {
         logger.debug("Waiting for the health-check to return false ...");
         Thread.sleep(50L);

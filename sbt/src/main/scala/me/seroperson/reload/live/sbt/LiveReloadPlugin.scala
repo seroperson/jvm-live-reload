@@ -25,7 +25,8 @@ object LiveReloadPlugin extends AutoPlugin {
 
   override lazy val projectSettings = Seq(
     libraryDependencies ++= Seq(
-      "me.seroperson" % "jvm-live-reload-webserver" % "0.0.1"
+      "me.seroperson" % "jvm-live-reload-webserver" % "0.0.1",
+      "me.seroperson" %% "jvm-live-reload-hooks" % "0.0.1"
     ),
     liveFileWatchService := {
       FileWatchService.defaultWatchService(
@@ -58,11 +59,13 @@ object LiveReloadPlugin extends AutoPlugin {
     liveStartupHooks := Seq(
       HookIoAppStartup,
       HookRestApiHealthCheckStartup
+      // HookTcpPortHealthCheckStartup
     ),
     liveShutdownHooks := Seq(
       HookIoAppShutdown,
       HookZioAppShutdown,
       HookRestApiHealthCheckShutdown
+      // HookTcpPortHealthCheckShutdown
     ),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.evaluated,

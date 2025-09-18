@@ -10,9 +10,10 @@ interface RestApiHealthCheckHook extends HealthCheckHook {
 
   default boolean isHealthy(String host, int port) {
     try (HttpClient client = HttpClient.newHttpClient()) {
-      HttpRequest request = HttpRequest.newBuilder()
-          .uri(new URI("http://" + host + ":" + port + "/health")).GET().build();
-      return client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200;
+      HttpRequest request =
+          HttpRequest.newBuilder().uri(new URI("http://" + host + ":" + port + "/health")).GET()
+              .timeout(java.time.Duration.ofMillis(500)).build();
+      return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200;
     } catch (Exception e) {
       return false;
     }

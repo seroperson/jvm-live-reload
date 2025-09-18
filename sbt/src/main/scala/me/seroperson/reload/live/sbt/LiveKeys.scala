@@ -20,10 +20,12 @@ object LiveKeys {
   // format: off
   val HookIoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
   val HookRestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
+  val HookTcpPortHealthCheckStartup = "me.seroperson.reload.live.hook.TcpPortHealthCheckStartupHook"
 
   val HookIoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
   val HookZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
   val HookRestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
+  val HookTcpPortHealthCheckShutdown = "me.seroperson.reload.live.hook.TcpPortHealthCheckShutdownHook"
   // format: on
 
   val liveStartupHooks = settingKey[Seq[String]]("Startup hooks")
