@@ -15,7 +15,7 @@ import xsbti.FileConverter
 
 object Commands {
 
-  private[this] var commonClassLoader: ClassLoader = _
+  private var commonClassLoader: ClassLoader = null
 
   val liveReloadTask = Def.task {
     liveCompileEverything.value.reduceLeft(_ ++ _)
@@ -25,7 +25,7 @@ object Commands {
 
   def liveRunTask(interactionArg: Option[InteractionMode]) = Def.inputTask {
     implicit val fc: FileConverter = fileConverter.value
-    import scala.collection.JavaConverters._
+    import scala.collection.JavaConverters.*
 
     val args = Def.spaceDelimited().parsed
 

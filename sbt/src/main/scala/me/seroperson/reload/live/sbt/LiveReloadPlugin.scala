@@ -6,7 +6,7 @@ import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
 import play.dev.filewatch.FileWatchService
 import play.dev.filewatch.LoggerProxy
-import sbt._
+import sbt.*
 import sbt.internal.inc.Analysis
 import sbt.plugins.JvmPlugin
 
@@ -14,8 +14,8 @@ object LiveReloadPlugin extends AutoPlugin {
 
   val autoImport = LiveKeys
 
-  import autoImport._
-  import sbt.Keys._
+  import autoImport.*
+  import sbt.Keys.*
 
   override def trigger = noTrigger
 

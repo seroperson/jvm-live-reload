@@ -8,7 +8,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import jline.console.ConsoleReader
 import scala.annotation.tailrec
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 trait InteractionMode {
 

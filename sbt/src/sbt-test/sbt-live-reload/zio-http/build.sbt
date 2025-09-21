@@ -5,8 +5,14 @@ import scala.util.Using
 def verifyResourceContains(path: String, expectedStatus: Int, expectedBody: Option[String]) = Using(HttpClient.newHttpClient()) { client =>
   val request = HttpRequest.newBuilder.uri(new URI("http://localhost:9000" + path)).GET.build
   val response = client.send(request, HttpResponse.BodyHandlers.ofString)
-  assert(response.statusCode == expectedStatus)
-}
+  val body = response.body()
+  if (body != expectedBody.getOrElse("")) {
+    sys.error(s"Body doesn't match: ${body} != ${expectedBody.getOrElse("")}")
+  }
+  if (response.statusCode != expectedStatus) {
+    sys.error(s"Status doesn't match: ${response.statusCode} != ${expectedStatus}")
+  }
+}.get
 
 enablePlugins(LiveReloadPlugin)
 
