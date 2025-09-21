@@ -36,26 +36,36 @@ object LiveReloadPlugin extends AutoPlugin {
       )
     },
     liveInteractionMode := ConsoleInteractionMode,
-    liveAssetsClassLoader := { (parent: ClassLoader) => parent },
+    liveAssetsClassLoader := SbtCompat.uncached { (parent: ClassLoader) =>
+      parent
+    },
     liveDevSettings := Nil,
     liveMonitoredFiles := Commands.liveMonitoredFilesTask.value,
     // all dependencies from outside the project (all dependency jars)
-    liveDependencyClasspath := (Runtime / externalDependencyClasspath).value,
+    liveDependencyClasspath := SbtCompat.uncached(
+      (Runtime / externalDependencyClasspath).value
+    ),
     // all user classes, in this project and any other subprojects that it depends on
-    liveReloaderClasspath := Classpaths
-      .concatDistinct(
-        Runtime / exportedProducts,
-        Runtime / internalDependencyClasspath
-      )
-      .value,
+    liveReloaderClasspath := SbtCompat.uncached(
+      Classpaths
+        .concatDistinct(
+          Runtime / exportedProducts,
+          Runtime / internalDependencyClasspath
+        )
+        .value
+    ),
     // filter out asset directories from the classpath (supports sbt-web 1.0 and 1.1)
-    liveReloaderClasspath ~= {
+    liveReloaderClasspath ~= SbtCompat.uncached {
       _.filter(_ => true) // .filter(_.get(WebKeys.webModulesLib.key).isEmpty)
     },
-    liveCommonClassloader := Commands.liveCommonClassloaderTask.value,
-    liveReload := Commands.liveReloadTask.value,
-    liveCompileEverything := Commands.liveCompileEverythingTask.value
-      .asInstanceOf[Seq[Analysis]],
+    liveCommonClassloader := SbtCompat.uncached(
+      Commands.liveCommonClassloaderTask.value
+    ),
+    liveReload := SbtCompat.uncached(Commands.liveReloadTask.value),
+    liveCompileEverything := SbtCompat.uncached(
+      Commands.liveCompileEverythingTask.value
+        .asInstanceOf[Seq[Analysis]]
+    ),
     liveStartupHooks := Seq(
       HookIoAppStartup,
       HookRestApiHealthCheckStartup
@@ -69,7 +79,7 @@ object LiveReloadPlugin extends AutoPlugin {
       // HookTcpPortHealthCheckShutdown
     ),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
-    Compile / run := Commands.liveDefaultRunTask.evaluated,
+    Compile / run := Commands.liveDefaultRunTask.map(_ => ()).evaluated,
     Compile / run / mainClass := Some(
       "me.seroperson.reload.live.webserver.DevServerStart"
     )

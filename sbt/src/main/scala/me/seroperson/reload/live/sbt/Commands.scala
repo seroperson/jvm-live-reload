@@ -1,16 +1,17 @@
 package me.seroperson.reload.live.sbt
 
-import LiveReloadPlugin.autoImport._
+import LiveReloadPlugin.autoImport.*
 import java.nio.file.Path
 import java.util.function.Supplier
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.settings.DevServerSettings
-import sbt._
-import sbt.Keys._
+import sbt.*
+import sbt.Keys.*
 import sbt.internal.inc.Analysis
 import sbt.util.LoggerContext
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
+import xsbti.FileConverter
 
 object Commands {
 
@@ -23,6 +24,7 @@ object Commands {
   val liveDefaultRunTask = liveRunTask(None)
 
   def liveRunTask(interactionArg: Option[InteractionMode]) = Def.inputTask {
+    implicit val fc: FileConverter = fileConverter.value
     import scala.collection.JavaConverters._
 
     val args = Def.spaceDelimited().parsed
@@ -43,9 +45,7 @@ object Commands {
       try {
         val newState = interaction match {
           case _: NonBlockingInteractionMode =>
-            loggerContext = SbtLoggerContextAccess(useLog4J =
-              sbtState.get(sbt.Keys.useLog4J.key).getOrElse(false)
-            )
+            loggerContext = SbtLoggerContextAccess(sbtState)
             sbtState.put(
               SbtLoggerContextAccess.loggerContextKey,
               loggerContext
@@ -55,13 +55,13 @@ object Commands {
         }
 
         (for {
-          analysis <- Project
+          analysis <- SbtCompat
             .runTask(scope / liveReload, newState)
             .map(_._2)
             .get
             .toEither
             .right
-          classpath <- Project
+          classpath <- SbtCompat
             .runTask(
               scope / liveReloaderClasspath,
               newState // .put(WebKeys.disableExportedProducts, true)
@@ -70,7 +70,9 @@ object Commands {
             .get
             .toEither
             .right
-        } yield new CompileResult.CompileSuccess(classpath.files.asJava)).left
+        } yield new CompileResult.CompileSuccess(
+          SbtCompat.getFiles(classpath).asJava
+        )).left
           .map(inc => {
             inc.directCause.map(_.printStackTrace())
             new CompileResult.CompileFailure(new Throwable("Error"))
@@ -93,7 +95,9 @@ object Commands {
     lazy val devModeServer = DevServerRunner.getInstance.run(
       /* settings */ settings,
       /* commonClassLoader */ liveCommonClassloader.value,
-      /* dependencyClasspath */ liveDependencyClasspath.value.files.asJava,
+      /* dependencyClasspath */ SbtCompat
+        .getFiles(liveDependencyClasspath.value)
+        .asJava,
       /* reloadCompile */ reloadCompile,
       /* assetsClassLoader */ liveAssetsClassLoader.value.apply,
       /* triggerReload */ null,
@@ -161,11 +165,16 @@ object Commands {
   }
 
   val liveCommonClassloaderTask = Def.task {
+    implicit val fc: FileConverter = fileConverter.value
+
     val classpath = (Compile / dependencyClasspath).value
     val log = streams.value.log
-    lazy val commonJars: PartialFunction[java.io.File, java.net.URL] = {
-      case jar if jar.getName.startsWith("h2-") || jar.getName == "h2.jar" =>
-        jar.toURI.toURL
+    lazy val commonJars: PartialFunction[SbtCompat.FileRef, java.net.URL] = {
+      case jar
+          if SbtCompat
+            .fileName(jar)
+            .startsWith("h2-") || SbtCompat.fileName(jar) == "h2.jar" =>
+        SbtCompat.toNioPath(jar).toUri.toURL
     }
 
     if (commonClassLoader == null) {
