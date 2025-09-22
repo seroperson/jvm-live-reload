@@ -16,8 +16,13 @@ class RuntimeShutdownHook extends Hook {
   override def isAvailable: Boolean =
     true
 
-  override def hook(settings: DevServerSettings, logger: BuildLogger): Unit = {
-    ReflectionUtils.runApplicationShutdownHooks()
+  override def hook(
+      th: Thread,
+      cl: ClassLoader,
+      settings: DevServerSettings,
+      logger: BuildLogger
+  ): Unit = {
+    ReflectionUtils.runApplicationShutdownHooks(logger)
   }
 
 }

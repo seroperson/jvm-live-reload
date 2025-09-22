@@ -66,16 +66,31 @@ object LiveReloadPlugin extends AutoPlugin {
       Commands.liveCompileEverythingTask.value
         .asInstanceOf[Seq[Analysis]]
     ),
-    liveStartupHooks := Seq(
-      HookClassnames.IoAppStartup,
-      HookClassnames.RestApiHealthCheckStartup
+    liveHookBundle := SbtCompat.uncached(
+      (Compile / dependencyClasspath).value.collectFirst {
+        case lib if SbtCompat.fileName(lib.data).startsWith("zio-http") =>
+          ZioAppHookBundle
+        case lib if SbtCompat.fileName(lib.data).startsWith("http4s") =>
+          IoAppHookBundle
+        case lib if SbtCompat.fileName(lib.data).startsWith("cask") =>
+          CaskAppHookBundle
+      }
     ),
-    liveShutdownHooks := Seq(
-      HookClassnames.IoAppShutdown,
-      HookClassnames.ZioAppShutdown,
-      HookClassnames.CaskShutdown,
-      HookClassnames.RestApiHealthCheckShutdown
-    ),
+    liveStartupHooks := SbtCompat.uncached((liveHookBundle.value match {
+      case Some(hookBundle) => hookBundle.startupHooks
+      case None =>
+        Seq(
+          HookClassnames.RestApiHealthCheckStartup
+        )
+    })),
+    liveShutdownHooks := SbtCompat.uncached((liveHookBundle.value match {
+      case Some(hookBundle) => hookBundle.shutdownHooks
+      case None =>
+        Seq(
+          HookClassnames.ThreadInterruptShutdown,
+          HookClassnames.RestApiHealthCheckShutdown
+        )
+    })),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.map(_ => ()).evaluated,
     Compile / run / mainClass := Some(

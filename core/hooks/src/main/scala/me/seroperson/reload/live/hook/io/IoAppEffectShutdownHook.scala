@@ -25,7 +25,12 @@ class IoAppEffectShutdownHook extends Hook {
   override def isAvailable: Boolean =
     ReflectionUtils.hasClass("cats.effect.IOApp$")
 
-  override def hook(settings: DevServerSettings, logger: BuildLogger): Unit = {
+  override def hook(
+      th: Thread,
+      cl: ClassLoader,
+      settings: DevServerSettings,
+      logger: BuildLogger
+  ): Unit = {
     val allCollectedRuntimes =
       IORuntime.allRuntimes.unsafeHashtable().filter(_ != null).collect {
         case runtime: IORuntime =>

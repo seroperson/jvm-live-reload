@@ -1,5 +1,6 @@
 package me.seroperson.reload.live.hook
 
+import me.seroperson.reload.live.build.BuildLogger
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.IdentityHashMap
@@ -40,18 +41,21 @@ object ReflectionUtils {
     *   This method uses internal JVM APIs and may not work on all JVM
     *   implementations
     */
-  def runApplicationShutdownHooks(): Unit = {
+  def runApplicationShutdownHooks(logger: BuildLogger): Unit = {
     try {
+      logger.debug("Running shutdown hooks")
       val clazz = Class.forName("java.lang.ApplicationShutdownHooks")
       val method: Method = clazz.getDeclaredMethod("runHooks")
       method.setAccessible(true)
       method.invoke(null)
+      logger.debug("java.lang.ApplicationShutdownHooks.runHooks was invoked successfully")
 
       // Reset the hooks field to a new IdentityHashMap to prevent
       // the application from thinking it's permanently in shutdown state
       val hooksField: Field = clazz.getDeclaredField("hooks")
       hooksField.setAccessible(true)
       hooksField.set(null, new IdentityHashMap[Thread, Thread]())
+      logger.debug("java.lang.ApplicationShutdownHooks.hooks were invalidated successfully")
     } catch {
       case e: Exception =>
         System.err.println(

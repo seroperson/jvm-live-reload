@@ -48,6 +48,7 @@ public final class DevServerRunner {
     try {
       var sharedClasses = List.of(me.seroperson.reload.live.build.BuildLink.class.getName(),
           me.seroperson.reload.live.build.BuildLogger.class.getName(),
+          me.seroperson.reload.live.ReloadGeneration.class.getName(),
           me.seroperson.reload.live.settings.DevServerSettings.class.getName(),
           me.seroperson.reload.live.hook.Hook.class.getName(),
           me.seroperson.reload.live.build.ReloadableServer.class.getName());
@@ -79,6 +80,7 @@ public final class DevServerRunner {
 
         @Override
         public void close() {
+          logger.debug("Running DevServerRunner.close()");
           server.stop();
           reloader.close();
 

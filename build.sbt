@@ -55,6 +55,7 @@ lazy val `sbt-live-reload` = (projectMatrix in file("sbt"))
     name := "sbt-live-reload",
     description := "Providing an universal Live Reload expirience for web applications built with SBT",
     scriptedBufferLog := false,
+    scriptedBatchExecution := false,
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.10.10"

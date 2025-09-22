@@ -13,6 +13,7 @@ object LiveKeys {
   object HookClassnames {
     // format: off
     val IoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
+    val ZioAppStartup = "me.seroperson.reload.live.hook.zio.ZioAppStartupHook"
     val RestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
 
     val IoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
@@ -20,10 +21,9 @@ object LiveKeys {
     val CaskShutdown = "me.seroperson.reload.live.hook.cask.CaskShutdownHook"
     val RuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
     val RestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
+    val ThreadInterruptShutdown = "me.seroperson.reload.live.hook.ThreadInterruptShutdownHook"
     // format: on
   }
-
-  type ClassLoaderCreator = (String, Array[URL], ClassLoader) => ClassLoader
 
   val liveFileWatchService =
     settingKey[FileWatchService]("The watch service to catch file changes.")
@@ -32,10 +32,13 @@ object LiveKeys {
     "Console interaction mode (non-interactive or interactive)."
   )
 
+  val liveHookBundle = taskKey[Option[HookBundle]](
+    "If defined, hooks are loaded from predefined set."
+  )
   val liveStartupHooks =
-    settingKey[Seq[String]]("The list of startup hooks (classnames)")
+    taskKey[Seq[String]]("The list of startup hooks (classnames).")
   val liveShutdownHooks =
-    settingKey[Seq[String]]("The list of shutdown hooks (classnames)")
+    taskKey[Seq[String]]("The list of shutdown hooks (classnames).")
 
   val liveDevSettings =
     settingKey[Seq[(String, String)]]("Development server settings.")
@@ -51,7 +54,7 @@ object LiveKeys {
   )
 
   val liveReload = taskKey[Analysis](
-    "Executed when sources of changed, to recompile (and possibly reload) the app"
+    "Executed when sources of changed, to recompile (and possibly reload) the app."
   )
   val liveCompileEverything = taskKey[Seq[Analysis]](
     "Compiles this project and every project it depends on."

@@ -20,7 +20,12 @@ class IoAppStartupHook extends Hook {
   override def isAvailable: Boolean =
     ReflectionUtils.hasClass("cats.effect.IOApp$")
 
-  override def hook(settings: DevServerSettings, logger: BuildLogger): Unit = {
+  override def hook(
+      th: Thread,
+      cl: ClassLoader,
+      settings: DevServerSettings,
+      logger: BuildLogger
+  ): Unit = {
     // Disables "IOApp `main` is running on a thread other than the main thread" warnings
     System.setProperty("cats.effect.warnOnNonMainThreadDetected", "false");
   }

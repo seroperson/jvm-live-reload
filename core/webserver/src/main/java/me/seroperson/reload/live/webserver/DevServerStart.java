@@ -1,5 +1,6 @@
 package me.seroperson.reload.live.webserver;
 
+import me.seroperson.reload.live.ReloadGeneration;
 import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.BuildLink;
 import me.seroperson.reload.live.build.ReloadableServer;
@@ -15,12 +16,15 @@ import java.net.ServerSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Objects;
+import java.lang.reflect.InvocationTargetException;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -49,6 +53,8 @@ public class DevServerStart implements ReloadableServer {
   private final DevServerSettings settings;
   private final BuildLogger logger;
   private final BuildLink buildLink;
+
+  private static final AccessControlContext accessControlContext = AccessController.getContext();
 
   public DevServerStart(DevServerSettings settings, BuildLink buildLink, BuildLogger logger,
       String mainClass, List<String> startupHookClasses, List<String> shutdownHookClasses) {
@@ -91,40 +97,56 @@ public class DevServerStart implements ReloadableServer {
       return (Hook) Class.forName(className).newInstance();
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       logger.error("Unable to initialize hook: " + className, e);
+      e.printStackTrace();
       return null;
     }
   }
 
-  private synchronized void startInternal(ClassLoader classLoader) {
-    this.classLoader = classLoader;
+  private synchronized void startInternal(ReloadGeneration generation) {
+    this.classLoader = generation.getReloadedClassLoader();
     this.appThread = new Thread(() -> {
-      Thread.currentThread().setName("main");
+      var currentThread = Thread.currentThread();
+      currentThread.setName("main");
       logger.info("🚀 Starting " + mainClass);
       try {
         Class<?> clazz = classLoader.loadClass(mainClass);
         var mainMethod = clazz.getMethod("main", String[].class);
+        logger.debug("Running with Context ClassLoader: " + currentThread.getContextClassLoader()
+            + " in thread " + currentThread);
         mainMethod.invoke(null, (Object) new String[0]);
-      } catch (Exception e) {
-        if (e.getCause() instanceof InterruptedException) {
-          logger.debug("Application thread was interrupted");
+        logger.debug("After Application.main(String[]) execution");
+      } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
+        logger.error("Failed to invoke main method on " + mainClass, e);
+        stopInternal();
+        throw new RuntimeException(e);
+      } catch (InvocationTargetException e) {
+        // logger.error("Got InvocationTargetException. Its' classloader: " +
+        // e.getCause().getClass().getClassLoader());
+        logger.debug(
+            "Got InvocationTargetException: Its' cause: " + e.getCause().getClass().getName());
+        // logger.error("Current classloader: " + getClass().getClassLoader());
+        if (e.getCause().getClass().getName().equals("zio.FiberFailure")
+            || e.getCause() instanceof InterruptedException) {
+          // doing nothing
+          logger.debug("Application thread was interrupted (cause: "
+              + e.getCause().getClass().getName() + ")");
         } else {
-          logger.error("Failed to invoke main method on " + mainClass, e);
-          stopInternal();
-          throw new RuntimeException(e);
+          logger.error("Error in application main thread (cause: " + e.getCause() + ")",
+              e.getCause());
         }
       }
     });
+    appThread.setContextClassLoader(classLoader);
     appThread.start();
 
-    runHooks(startupHooks);
+    runHooks(appThread, classLoader, startupHooks);
   }
 
   private synchronized void stopInternal() {
     if (appThread != null) {
       logger.info("Stopping " + mainClass);
-      appThread.interrupt();
 
-      runHooks(shutdownHooks);
+      runHooks(appThread, classLoader, shutdownHooks);
 
       appThread = null;
     }
@@ -143,12 +165,13 @@ public class DevServerStart implements ReloadableServer {
     }
   }
 
-  private void runHooks(List<Hook> hooks) {
+  private void runHooks(Thread th, ClassLoader cl, List<Hook> hooks) {
     hooks.forEach((v) -> {
+      logger.debug("Running " + v.getClass().getSimpleName());
       long start = System.currentTimeMillis();
-      v.hook(settings, logger);
+      v.hook(th, cl, settings, logger);
       long time = System.currentTimeMillis() - start;
-      logger.debug("Running " + v.getClass().getSimpleName() + " took " + time + "ms");
+      logger.debug(v.getClass().getSimpleName() + " took " + time + "ms");
     });
   }
 
@@ -161,11 +184,12 @@ public class DevServerStart implements ReloadableServer {
   @Override
   public boolean reload() {
     var reloadResult = buildLink.reload();
-    if (reloadResult instanceof ClassLoader) {
+    logger.info("Got reloadResult: " + reloadResult);
+    if (reloadResult instanceof ReloadGeneration) {
       // New application classes
       logger.info("🔃 Reloading an application");
       stopInternal();
-      startInternal((ClassLoader) reloadResult);
+      startInternal((ReloadGeneration) reloadResult);
       logger.debug("Finished reloading");
       return true;
     } else if (reloadResult == null) {

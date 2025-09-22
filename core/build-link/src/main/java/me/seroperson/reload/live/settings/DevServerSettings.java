@@ -34,7 +34,7 @@ public class DevServerSettings {
           String::valueOf, Integer::parseInt);
   private final DevParameter<String> proxyHttpHost =
       new DevParameter<String>("live.reload.proxy.http.host", "LIVE_RELOAD_PROXY_HTTP_HOST",
-          "localhost", String::valueOf, Function.identity());
+          "0.0.0.0", String::valueOf, Function.identity());
 
   private final DevParameter<Integer> httpPort = new DevParameter<Integer>("live.reload.http.port",
       "LIVE_RELOAD_HTTP_PORT", 8080, String::valueOf, Integer::parseInt);

@@ -1,5 +1,8 @@
 package me.seroperson.reload.live.runner.classloader;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -29,6 +32,22 @@ public class SharedClassesClassLoader extends ClassLoader {
     super(parent);
     this.sharedClasses = new HashSet<>(sharedClasses);
     this.buildLoader = buildLoader;
+  }
+
+  @Override
+  public URL findResource(String name) {
+    // if (System.out != null) {
+    // System.out.println("In SharedClassesClassLoader: trying to get via findResource: " + name);
+    // }
+    return super.findResource(name);
+  }
+
+  @Override
+  public Enumeration<URL> getResources(String name) throws IOException {
+    // if (System.out != null) {
+    // System.out.println("In SharedClassesClassLoader: trying to get via getResources: " + name);
+    // }
+    return super.getResources(name);
   }
 
   /**

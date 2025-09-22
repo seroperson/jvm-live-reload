@@ -22,9 +22,10 @@ import java.util.stream.Stream;
 import me.seroperson.reload.live.build.BuildLink;
 import play.dev.filewatch.FileWatchService;
 import play.dev.filewatch.FileWatcher;
+import me.seroperson.reload.live.ReloadGeneration;
 import me.seroperson.reload.live.runner.CompileResult.CompileFailure;
 import me.seroperson.reload.live.runner.CompileResult.CompileSuccess;
-import me.seroperson.reload.live.runner.classloader.DelegatedResourcesClassLoader;
+import me.seroperson.reload.live.runner.classloader.NamedURLClassLoader;
 
 class DevServerReloader implements BuildLink, Closeable {
 
@@ -111,11 +112,52 @@ class DevServerReloader implements BuildLink, Closeable {
       lastModified = newLastModified;
 
       if (triggered || shouldReload || currentApplicationClassLoader == null) {
+        int iteration = classLoaderVersion.incrementAndGet();
         // Create a new classloader
-        currentApplicationClassLoader = new DelegatedResourcesClassLoader(
-            "ReloadableClassLoader(v" + classLoaderVersion.incrementAndGet() + ")", urls(cp),
-            dependenciesClassLoader);
-        return currentApplicationClassLoader;
+        currentApplicationClassLoader = new NamedURLClassLoader("iteration(" + iteration + ")",
+            urls(cp), dependenciesClassLoader);
+
+        /*
+        @formatter:off
+        System.out.println("Got classpath: " + cp);
+        cp.stream().forEach((file) -> {
+          try {
+            var path = java.nio.file.Paths.get("/", "home", "seroperson", "out");
+            Files.list(file.toPath()).forEach((p) -> {
+              try {
+                System.out.println("Copying path: " + p + " to "
+                    + path.resolve(p.getFileName().toString() + "." + classLoaderVersion.get()));
+                Files.copy(p,
+                    path.resolve(p.getFileName().toString() + "." + classLoaderVersion.get()));
+              } catch (IOException e) {
+                e.printStackTrace();
+              }
+            });
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        });
+        @formatter:on
+        */
+
+        /*
+        @formatter:off
+        System.out.println("Got classpath: " + cp);
+        cp.stream().forEach((file) -> {
+          try {
+            var path = java.nio.file.Paths.get("/", "home", "seroperson", "out");
+            System.out.println("Copying path: " + file.toPath() + " to " + path
+                .resolve(file.toPath().getFileName().toString() + "." + classLoaderVersion.get()));
+            Files.copy(file.toPath(), path
+                .resolve(file.toPath().getFileName().toString() + "." + classLoaderVersion.get()));
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        });
+        @formatter:on
+        */
+
+        return new ReloadGeneration(iteration, currentApplicationClassLoader);
       }
       return null; // null means nothing changed
     } else {

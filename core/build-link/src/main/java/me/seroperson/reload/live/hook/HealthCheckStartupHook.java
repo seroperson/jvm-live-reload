@@ -24,7 +24,7 @@ public abstract class HealthCheckStartupHook implements HealthCheckHook {
   }
 
   @Override
-  public void hook(DevServerSettings settings, BuildLogger logger) {
+  public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
     try {
       while (!isHealthy(settings.getHealthCheckPath(), settings.getHttpHost(),
           settings.getHttpPort())) {

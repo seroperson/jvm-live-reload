@@ -31,7 +31,6 @@ object Commands {
 
   def liveRunTask(interactionArg: Option[InteractionMode]) = Def.inputTask {
     implicit val fc: FileConverter = fileConverter.value
-    import scala.collection.JavaConverters.*
 
     val args = Def.spaceDelimited().parsed
 
@@ -98,6 +97,7 @@ object Commands {
       liveDevSettings.value.toMap.asJava
     );
 
+    val logger = new SbtBuildLogger(settings, sbtLog)
     lazy val devModeServer = DevServerRunner.getInstance.run(
       /* settings */ settings,
       /* dependencyClasspath */ SbtCompat
@@ -112,7 +112,7 @@ object Commands {
       /* reloadLock */ LiveReloadPlugin,
       /* startupHookClasses */ liveStartupHooks.value.asJava,
       /* shutdownHookClasses */ liveShutdownHooks.value.asJava,
-      /* logger */ new SbtBuildLogger(settings, sbtLog)
+      /* logger */ logger
     )
 
     val serverDidStart = interaction match {
@@ -138,8 +138,11 @@ object Commands {
         sbtLog.info(s"   Use ${UNDERLINED}Enter${RESET} to stop and exit")
 
         try {
+          logger.debug("Before waitForCancel")
           interaction.waitForCancel()
+          logger.debug("After waitForCancel")
         } finally {
+          logger.debug("Running devModeServer.close()")
           devModeServer.close()
         }
         true
