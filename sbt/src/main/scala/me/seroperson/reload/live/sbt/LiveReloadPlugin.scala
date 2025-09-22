@@ -10,6 +10,19 @@ import sbt.*
 import sbt.internal.inc.Analysis
 import sbt.plugins.JvmPlugin
 
+/** SBT plugin that provides live reload functionality for JVM applications.
+  *
+  * This plugin enables automatic recompilation and application restart when
+  * source code changes are detected. It works by:
+  *
+  *   1. Setting up a proxy server that forwards requests to the application
+  *   2. Monitoring source files for changes
+  *   3. Recompiling and reloading the application when changes are detected
+  *   4. Managing application lifecycle through configurable hooks
+  *
+  * The plugin supports various frameworks through specific hooks (Cats Effect,
+  * ZIO, Cask) and provides both blocking and non-blocking interaction modes.
+  */
 object LiveReloadPlugin extends AutoPlugin {
 
   val autoImport = LiveKeys
@@ -69,14 +82,12 @@ object LiveReloadPlugin extends AutoPlugin {
     liveStartupHooks := Seq(
       HookIoAppStartup,
       HookRestApiHealthCheckStartup
-      // HookTcpPortHealthCheckStartup
     ),
     liveShutdownHooks := Seq(
       HookIoAppShutdown,
       HookZioAppShutdown,
       HookCaskShutdown,
       HookRestApiHealthCheckShutdown
-      // HookTcpPortHealthCheckShutdown
     ),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.map(_ => ()).evaluated,

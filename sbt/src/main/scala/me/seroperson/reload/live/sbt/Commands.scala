@@ -13,6 +13,13 @@ import sbt.util.LoggerContext
 import scala.collection.JavaConverters.*
 import xsbti.FileConverter
 
+/** Object containing SBT task and command implementations for live reload
+  * functionality.
+  *
+  * This object provides the core implementation of SBT tasks and commands that
+  * enable live reload during development. It manages compilation, class
+  * loading, file monitoring, and server lifecycle operations.
+  */
 object Commands {
 
   private var commonClassLoader: ClassLoader = null

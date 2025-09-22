@@ -10,17 +10,31 @@ import jline.console.ConsoleReader
 import scala.annotation.tailrec
 import scala.concurrent.duration.*
 
+/** Defines how user interaction is handled during development server execution.
+  *
+  * This trait provides the interface for different ways to handle user input
+  * and server lifecycle management during development. Implementations can
+  * provide console-based interaction, GUI-based interaction, or non-blocking
+  * background execution.
+  */
 trait InteractionMode {
 
-  /** This is our means of blocking a `run` call until the user has denoted, via
-    * some interface (console or GUI) that application should no longer be
-    * running.
+  /** Blocks execution until the user indicates the application should stop.
+    *
+    * This is the primary means of keeping a `run` command active until the user
+    * has indicated, via some interface (console or GUI), that the application
+    * should no longer be running.
     */
   def waitForCancel(): Unit
 
-  /** Enables and disables console echo (or does nothing if no console). This
+  /** Executes code with console echo disabled.
+    *
+    * Enables and disables console echo (or does nothing if no console). This
     * ensures console echo is enabled on exception thrown in the given code
-    * block.
+    * block, providing a clean user experience during interaction.
+    *
+    * @param f
+    *   the code block to execute without echo
     */
   def doWithoutEcho(f: => Unit): Unit
 

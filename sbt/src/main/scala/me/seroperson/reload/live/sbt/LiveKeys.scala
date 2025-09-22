@@ -15,23 +15,25 @@ object LiveKeys {
   val liveFileWatchService =
     settingKey[FileWatchService]("The watch service to catch file changes.")
 
-  val liveInteractionMode = settingKey[InteractionMode]("")
+  val liveInteractionMode = settingKey[InteractionMode](
+    "Console interaction mode (non-interactive or interactive)."
+  )
 
   // format: off
   val HookIoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
   val HookRestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
-  val HookTcpPortHealthCheckStartup = "me.seroperson.reload.live.hook.TcpPortHealthCheckStartupHook"
 
   val HookIoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
   val HookZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
   val HookCaskShutdown = "me.seroperson.reload.live.hook.cask.CaskShutdownHook"
   val HookRuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
   val HookRestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
-  val HookTcpPortHealthCheckShutdown = "me.seroperson.reload.live.hook.TcpPortHealthCheckShutdownHook"
   // format: on
 
-  val liveStartupHooks = settingKey[Seq[String]]("Startup hooks")
-  val liveShutdownHooks = settingKey[Seq[String]]("Shutdown hooks")
+  val liveStartupHooks =
+    settingKey[Seq[String]]("The list of startup hooks (classnames)")
+  val liveShutdownHooks =
+    settingKey[Seq[String]]("The list of shutdown hooks (classnames)")
 
   val liveDevSettings =
     settingKey[Seq[(String, String)]]("Development server settings.")

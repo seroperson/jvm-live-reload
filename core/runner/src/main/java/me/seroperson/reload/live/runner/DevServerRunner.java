@@ -12,8 +12,8 @@ import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.BuildLink;
 import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.settings.DevServerSettings;
-import me.seroperson.reload.live.runner.classloader.DelegatingClassLoader;
 import me.seroperson.reload.live.runner.classloader.NamedURLClassLoader;
+import me.seroperson.reload.live.runner.classloader.SharedClassesClassLoader;
 
 public final class DevServerRunner {
 
@@ -33,62 +33,31 @@ public final class DevServerRunner {
     // Set Java system properties
     // settings.getMergedProperties().forEach(System::setProperty);
 
-    /*
-     * We need to do a bit of classloader magic to run the application.
-     *
-     * There are six classloaders:
-     *
-     * 1. buildLoader, the classloader of sbt and the sbt plugin.
-     *
-     * 2. commonLoader, a classloader that persists across calls to run. This classloader is stored
-     * inside the liveCommonClassloader task. This classloader will load the classes for the H2
-     * database if it finds them in the user's classpath. This allows H2's in-memory database state
-     * to survive across calls to run.
-     *
-     * 3. delegatingLoader, a special classloader that overrides class loading to delegate shared
-     * classes for build link to the buildLoader, and accesses the
-     * reloader.currentApplicationClassLoader for resource loading to make user resources available
-     * to dependency classes. Has the commonLoader as its parent.
-     *
-     * 4. applicationLoader, contains the application dependencies. Has the delegatingLoader as its
-     * parent. Classes from the commonLoader and the delegatingLoader are checked for loading first.
-     *
-     * 5. liveAssetsClassLoader, serves assets from all projects, prefixed as configured. It does no
-     * caching, and doesn't need to be reloaded each time the assets are rebuilt.
-     *
-     * 6. reloader.currentApplicationClassLoader, contains the user classes and resources. Has
-     * applicationLoader as its parent, where the application dependencies are found, and which will
-     * delegate through to the buildLoader via the delegatingLoader for the shared link. Resources
-     * are actually loaded by the delegatingLoader, where they are available to both the reloader
-     * and v the applicationLoader. This classloader is recreated on reload.
-     *
-     * Someone working on this code in the future might want to tidy things up by splitting some of
-     * the custom logic out of the URLClassLoaders and into their own simpler ClassLoader
-     * implementations. The curious cycle between applicationLoader and
-     * reloader.currentApplicationClassLoader could also use some attention.
+    /**
+     * @formatter:off
+     * buildLoader
+     *   └── commonLoader - persists across runs, contains H2 database classes
+     *       └── sharedClassesLoader - delegates specific shared classes to buildLoader
+     *           └── applicationLoader - contains application dependencies
+     *               ├── assetsLoader - serves static assets without caching
+     *               └── currentApplicationClassLoader - user code, recreated on reload
+     * @formatter:on
      */
 
     var buildLoader = this.getClass().getClassLoader();
 
     try {
-      /*
-       * ClassLoader that delegates loading of shared build link classes to the buildLoader. Also
-       * accesses the reloader resources to make these available to the applicationLoader, creating
-       * a full circle for resource loading.
-       */
       var sharedClasses = List.of(me.seroperson.reload.live.build.BuildLink.class.getName(),
           me.seroperson.reload.live.build.BuildLogger.class.getName(),
           me.seroperson.reload.live.settings.DevServerSettings.class.getName(),
           me.seroperson.reload.live.hook.Hook.class.getName(),
           me.seroperson.reload.live.build.ReloadableServer.class.getName());
-      ClassLoader delegatingLoader = new DelegatingClassLoader(commonClassLoader, sharedClasses,
-          buildLoader, () -> reloader.getClassLoader());
+      ClassLoader sharedClassesLoader =
+          new SharedClassesClassLoader(commonClassLoader, sharedClasses, buildLoader);
 
       var applicationLoader = new NamedURLClassLoader("DependencyClassLoader",
-          urls(dependencyClasspath), delegatingLoader);
+          urls(dependencyClasspath), sharedClassesLoader);
 
-      // Need to call the assetsClassLoader function _after_ (!) the beforeStarted run
-      // hooks ran
       var assetsLoader = assetsClassLoader.apply(applicationLoader);
 
       reloader = new DevServerReloader(assetsLoader, reloadCompile, triggerReload, monitoredFiles,

@@ -5,6 +5,14 @@ import me.seroperson.reload.live.hook.Hook
 import me.seroperson.reload.live.hook.ReflectionUtils
 import me.seroperson.reload.live.settings.DevServerSettings
 
+/** Startup hook for Cats Effect IOApp applications.
+  *
+  * This hook prepares the environment for Cats Effect applications by disabling
+  * warnings about main thread detection. In live reload scenarios, the
+  * application main method may not run on the original main thread, which would
+  * normally trigger warnings. This hook suppresses those warnings to provide a
+  * cleaner development experience.
+  */
 class IoAppStartupHook extends Hook {
 
   override def description: String = "Starts a cats.effect.IOApp"
