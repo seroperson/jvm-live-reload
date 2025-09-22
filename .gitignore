@@ -5,6 +5,7 @@ mill.*
 
 # sbt output
 target/
+.sbt/
 
 # IDE stuff
 .idea/
@@ -15,4 +16,5 @@ target/
 .metals/
 metals.sbt
 .bloop/
+*.semanticdb
 

@@ -1,0 +1,10 @@
+# Start dev mode
+> bgRun
+
+# Existing file change detection
+> verifyResourceContains /greet 200 "Hello World"
+$ delete src/main/scala/App.scala
+$ copy-file changes/NewApp.scala.1 src/main/scala/NewApp.scala
+$ copy-file changes/NewClass.scala.1 src/main/scala/NewClass.scala
+> verifyResourceContains /greet_reloaded 200 "World Hello 1"
+> verifyResourceContains /greet 404 "Not found"

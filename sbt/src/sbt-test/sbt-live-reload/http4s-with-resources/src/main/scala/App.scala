@@ -1,0 +1,55 @@
+import cats.effect.Async
+import cats.effect.IO
+import cats.effect.IOApp
+import cats.effect.Sync
+import cats.effect.implicits._
+import cats.syntax.all._
+import com.comcast.ip4s._
+import org.http4s._
+import org.http4s.dsl.Http4sDsl
+import org.http4s.dsl.io._
+import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.implicits._
+import org.typelevel.log4cats._
+import pureconfig._
+import pureconfig.generic.auto._
+
+case class TestRootConfig(a: Int)
+
+object App extends IOApp.Simple {
+
+  // assumes dependency on log4cats-slf4j module
+  import org.typelevel.log4cats.slf4j.Slf4jFactory
+
+  // create our LoggerFactory
+  implicit val logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
+
+  def helloWorldRoutes[F[_]: Sync](config: TestRootConfig): HttpRoutes[F] = {
+    val dsl = new Http4sDsl[F] {}
+    import dsl._
+    HttpRoutes.of[F] {
+      case GET -> Root / "greet" =>
+        Ok(s"Hello World ${config.a}")
+      case GET -> Root / "health" =>
+        Ok()
+    }
+  }
+
+  def runServer[F[_]: Async: LoggerFactory]: F[Nothing] = {
+    for {
+      config <- Async[F].delay {
+        ConfigSource.default.load[TestRootConfig].right.get
+      }.toResource
+      httpApp = helloWorldRoutes[F](config).orNotFound
+      _ <-
+        EmberServerBuilder
+          .default[F]
+          .withHost(ipv4"0.0.0.0")
+          .withPort(port"8080")
+          .withHttpApp(httpApp)
+          .build
+    } yield ()
+  }.useForever
+
+  val run = runServer[IO]
+}
