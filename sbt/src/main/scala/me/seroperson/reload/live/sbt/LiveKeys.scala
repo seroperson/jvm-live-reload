@@ -10,6 +10,19 @@ import sbt.taskKey
 
 object LiveKeys {
 
+  object HookClassnames {
+    // format: off
+    val IoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
+    val RestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
+
+    val IoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
+    val ZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
+    val CaskShutdown = "me.seroperson.reload.live.hook.cask.CaskShutdownHook"
+    val RuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
+    val RestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
+    // format: on
+  }
+
   type ClassLoaderCreator = (String, Array[URL], ClassLoader) => ClassLoader
 
   val liveFileWatchService =
@@ -18,17 +31,6 @@ object LiveKeys {
   val liveInteractionMode = settingKey[InteractionMode](
     "Console interaction mode (non-interactive or interactive)."
   )
-
-  // format: off
-  val HookIoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"
-  val HookRestApiHealthCheckStartup = "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
-
-  val HookIoAppShutdown = "me.seroperson.reload.live.hook.io.IoAppShutdownHook"
-  val HookZioAppShutdown = "me.seroperson.reload.live.hook.zio.ZioAppShutdownHook"
-  val HookCaskShutdown = "me.seroperson.reload.live.hook.cask.CaskShutdownHook"
-  val HookRuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
-  val HookRestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
-  // format: on
 
   val liveStartupHooks =
     settingKey[Seq[String]]("The list of startup hooks (classnames)")
@@ -48,26 +50,10 @@ object LiveKeys {
     "The application classpath, containing all projects in this build that are dependencies of this project, including this project."
   )
 
-  val liveCommonClassloader = taskKey[ClassLoader](
-    "The common classloader, is used to hold H2 to ensure in memory databases don't get lost between invocations of run."
-  )
-  val liveDependencyClassLoader = taskKey[ClassLoaderCreator](
-    "A function to create the dependency classloader from a name, set of URLs and parent classloader."
-  )
-  val liveReloaderClassLoader = taskKey[ClassLoaderCreator](
-    "A function to create the application classloader from a name, set of URLs and parent classloader."
-  )
-  val liveAssetsClassLoader = taskKey[ClassLoader => ClassLoader](
-    "Function that creates a classloader from a given parent that contains all the assets."
-  )
-
   val liveReload = taskKey[Analysis](
     "Executed when sources of changed, to recompile (and possibly reload) the app"
   )
   val liveCompileEverything = taskKey[Seq[Analysis]](
     "Compiles this project and every project it depends on."
-  )
-  val liveAssetsWithCompilation = taskKey[Analysis](
-    "The task that's run on a particular project to compile it. By default, builds assets and runs compile."
   )
 }

@@ -9,9 +9,8 @@ import java.util.HashSet;
  *
  * <p>
  * This ClassLoader is designed to bridge different ClassLoader contexts in a live reload
- * environment by ensuring that specific shared classes (build link interfaces) are loaded
- * from the build system ClassLoader rather than from the normal parent delegation chain.
- * This eliminates the circular dependency problem present in the original DelegatingClassLoader.
+ * environment by ensuring that specific shared classes (build link interfaces) are loaded from the
+ * build system ClassLoader rather than from the normal parent delegation chain.
  */
 public class SharedClassesClassLoader extends ClassLoader {
 
@@ -33,8 +32,8 @@ public class SharedClassesClassLoader extends ClassLoader {
   }
 
   /**
-   * Loads a class, delegating shared classes to the build loader.
-   * All other classes follow normal parent delegation.
+   * Loads a class, delegating shared classes to the build loader. All other classes follow normal
+   * parent delegation.
    *
    * @param name the name of the class to load
    * @param resolve whether to resolve the class
@@ -52,6 +51,7 @@ public class SharedClassesClassLoader extends ClassLoader {
 
   @Override
   public String toString() {
-    return "SharedClassesClassLoader[shared=" + sharedClasses.size() + ", parent=" + getParent() + "]";
+    return "SharedClassesClassLoader[shared=" + sharedClasses.size() + ", parent=" + getParent()
+        + "]";
   }
 }

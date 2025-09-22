@@ -36,7 +36,7 @@ class DevServerReloader implements BuildLink, Closeable {
 
   private final Supplier<Boolean> triggerReload;
 
-  private final ClassLoader baseClassLoader;
+  private final ClassLoader dependenciesClassLoader;
 
   // The current classloader for the application
   private volatile URLClassLoader currentApplicationClassLoader;
@@ -59,19 +59,15 @@ class DevServerReloader implements BuildLink, Closeable {
 
   private final AtomicInteger classLoaderVersion = new AtomicInteger(0);
 
-  DevServerReloader(ClassLoader baseClassLoader, Supplier<CompileResult> compile,
+  DevServerReloader(ClassLoader dependenciesClassLoader, Supplier<CompileResult> compile,
       Supplier<Boolean> triggerReload, List<File> monitoredFiles, FileWatchService fileWatchService,
       Object reloadLock) {
-    this.baseClassLoader = baseClassLoader;
+    this.dependenciesClassLoader = dependenciesClassLoader;
     this.compile = compile;
     this.triggerReload = triggerReload;
     if (!monitoredFiles.isEmpty() && fileWatchService != null) {
       // Create the watcher, updates the changed boolean when a file has changed:
-      Callable<Void> callable = () -> {
-        changed = true;
-        return null;
-      };
-      this.watcher = fileWatchService.watch(monitoredFiles, callable);
+      this.watcher = fileWatchService.watch(monitoredFiles, () -> changed = true);
     } else {
       this.watcher = null;
     }
@@ -118,7 +114,7 @@ class DevServerReloader implements BuildLink, Closeable {
         // Create a new classloader
         currentApplicationClassLoader = new DelegatedResourcesClassLoader(
             "ReloadableClassLoader(v" + classLoaderVersion.incrementAndGet() + ")", urls(cp),
-            baseClassLoader);
+            dependenciesClassLoader);
         return currentApplicationClassLoader;
       }
       return null; // null means nothing changed

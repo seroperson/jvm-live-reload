@@ -41,24 +41,18 @@ object LiveReloadPlugin extends AutoPlugin {
       "me.seroperson" % "jvm-live-reload-webserver" % "0.0.1",
       "me.seroperson" %% "jvm-live-reload-hooks" % "0.0.1"
     ),
-    liveFileWatchService := {
-      FileWatchService.defaultWatchService(
-        target.value,
-        pollInterval.value.toMillis.toInt,
-        null.asInstanceOf[LoggerProxy]
-      )
-    },
+    liveFileWatchService := FileWatchService.detect(
+      pollInterval.value.toMillis.toInt,
+      null.asInstanceOf[LoggerProxy]
+    ),
     liveInteractionMode := ConsoleInteractionMode,
-    liveAssetsClassLoader := SbtCompat.uncached { (parent: ClassLoader) =>
-      parent
-    },
     liveDevSettings := Nil,
     liveMonitoredFiles := Commands.liveMonitoredFilesTask.value,
     // all dependencies from outside the project (all dependency jars)
     liveDependencyClasspath := SbtCompat.uncached(
       (Runtime / externalDependencyClasspath).value
     ),
-    // all user classes, in this project and any other subprojects that it depends on
+    // all user classes in this project and any other subprojects that it depends on
     liveReloaderClasspath := SbtCompat.uncached(
       Classpaths
         .concatDistinct(
@@ -67,27 +61,20 @@ object LiveReloadPlugin extends AutoPlugin {
         )
         .value
     ),
-    // filter out asset directories from the classpath (supports sbt-web 1.0 and 1.1)
-    liveReloaderClasspath ~= SbtCompat.uncached {
-      _.filter(_ => true) // .filter(_.get(WebKeys.webModulesLib.key).isEmpty)
-    },
-    liveCommonClassloader := SbtCompat.uncached(
-      Commands.liveCommonClassloaderTask.value
-    ),
     liveReload := SbtCompat.uncached(Commands.liveReloadTask.value),
     liveCompileEverything := SbtCompat.uncached(
       Commands.liveCompileEverythingTask.value
         .asInstanceOf[Seq[Analysis]]
     ),
     liveStartupHooks := Seq(
-      HookIoAppStartup,
-      HookRestApiHealthCheckStartup
+      HookClassnames.IoAppStartup,
+      HookClassnames.RestApiHealthCheckStartup
     ),
     liveShutdownHooks := Seq(
-      HookIoAppShutdown,
-      HookZioAppShutdown,
-      HookCaskShutdown,
-      HookRestApiHealthCheckShutdown
+      HookClassnames.IoAppShutdown,
+      HookClassnames.ZioAppShutdown,
+      HookClassnames.CaskShutdown,
+      HookClassnames.RestApiHealthCheckShutdown
     ),
     Compile / bgRun := Commands.liveBgRunTask.evaluated,
     Compile / run := Commands.liveDefaultRunTask.map(_ => ()).evaluated,

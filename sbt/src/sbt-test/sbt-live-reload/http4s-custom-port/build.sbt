@@ -34,6 +34,5 @@ liveDevSettings ++= Seq(
 InputKey[Unit]("verifyResourceContains") := {
   val args = Def.spaceDelimited("<path> <status> <words> ...").parsed
   val path :: status :: assertions = args
-  println(s"Requesting $path with $status with $assertions with $args")
   verifyResourceContains(path, status.toInt, assertions.headOption)
 }

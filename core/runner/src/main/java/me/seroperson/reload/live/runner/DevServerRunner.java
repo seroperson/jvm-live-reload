@@ -19,9 +19,8 @@ public final class DevServerRunner {
 
   private DevServerReloader reloader;
 
-  public DevServer run(DevServerSettings settings, ClassLoader commonClassLoader,
-      List<File> dependencyClasspath, Supplier<CompileResult> reloadCompile,
-      Function<ClassLoader, ClassLoader> assetsClassLoader, Supplier<Boolean> triggerReload,
+  public DevServer run(DevServerSettings settings, List<File> dependencyClasspath,
+      Supplier<CompileResult> reloadCompile, Supplier<Boolean> triggerReload,
       List<File> monitoredFiles, FileWatchService fileWatchService, String mainClassName,
       String internalMainClassName, Object reloadLock, List<String> startupHookClasses,
       List<String> shutdownHookClasses, BuildLogger logger) {
@@ -35,16 +34,16 @@ public final class DevServerRunner {
 
     /**
      * @formatter:off
-     * buildLoader
-     *   └── commonLoader - persists across runs, contains H2 database classes
-     *       └── sharedClassesLoader - delegates specific shared classes to buildLoader
-     *           └── applicationLoader - contains application dependencies
-     *               ├── assetsLoader - serves static assets without caching
-     *               └── currentApplicationClassLoader - user code, recreated on reload
+     * rootClassLoader - system classes
+     * └── buildLoader - sbt classes
+     * └── sharedClassesLoader - delegates specific shared classes to buildLoader, everything else to rootClassLoader
+     *     └── dependenciesClassLoader - all jars
+     *         └── currentApplicationClassLoader - user code, recreated on reload
      * @formatter:on
      */
 
     var buildLoader = this.getClass().getClassLoader();
+    var rootClassLoader = java.lang.ClassLoader.getSystemClassLoader().getParent();
 
     try {
       var sharedClasses = List.of(me.seroperson.reload.live.build.BuildLink.class.getName(),
@@ -53,17 +52,15 @@ public final class DevServerRunner {
           me.seroperson.reload.live.hook.Hook.class.getName(),
           me.seroperson.reload.live.build.ReloadableServer.class.getName());
       ClassLoader sharedClassesLoader =
-          new SharedClassesClassLoader(commonClassLoader, sharedClasses, buildLoader);
+          new SharedClassesClassLoader(rootClassLoader, sharedClasses, buildLoader);
 
-      var applicationLoader = new NamedURLClassLoader("DependencyClassLoader",
+      var dependenciesClassLoader = new NamedURLClassLoader("DependencyClassLoader",
           urls(dependencyClasspath), sharedClassesLoader);
 
-      var assetsLoader = assetsClassLoader.apply(applicationLoader);
+      reloader = new DevServerReloader(dependenciesClassLoader, reloadCompile, triggerReload,
+          monitoredFiles, fileWatchService, reloadLock);
 
-      reloader = new DevServerReloader(assetsLoader, reloadCompile, triggerReload, monitoredFiles,
-          fileWatchService, reloadLock);
-
-      var mainClass = applicationLoader.loadClass(mainClassName);
+      var mainClass = dependenciesClassLoader.loadClass(mainClassName);
       var constructor = mainClass.getConstructor(DevServerSettings.class, BuildLink.class,
           BuildLogger.class, String.class, List.class, List.class);
       var server = (ReloadableServer) constructor.newInstance(settings, reloader, logger,

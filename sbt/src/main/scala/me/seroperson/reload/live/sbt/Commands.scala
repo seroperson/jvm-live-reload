@@ -2,6 +2,7 @@ package me.seroperson.reload.live.sbt
 
 import LiveReloadPlugin.autoImport.*
 import java.nio.file.Path
+import java.util.Arrays
 import java.util.function.Supplier
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
@@ -21,8 +22,6 @@ import xsbti.FileConverter
   * loading, file monitoring, and server lifecycle operations.
   */
 object Commands {
-
-  private var commonClassLoader: ClassLoader = null
 
   val liveReloadTask = Def.task {
     liveCompileEverything.value.reduceLeft(_ ++ _)
@@ -71,7 +70,7 @@ object Commands {
           classpath <- SbtCompat
             .runTask(
               scope / liveReloaderClasspath,
-              newState // .put(WebKeys.disableExportedProducts, true)
+              newState
             )
             .map(_._2)
             .get
@@ -101,12 +100,10 @@ object Commands {
 
     lazy val devModeServer = DevServerRunner.getInstance.run(
       /* settings */ settings,
-      /* commonClassLoader */ liveCommonClassloader.value,
       /* dependencyClasspath */ SbtCompat
         .getFiles(liveDependencyClasspath.value)
         .asJava,
       /* reloadCompile */ reloadCompile,
-      /* assetsClassLoader */ liveAssetsClassLoader.value.apply,
       /* triggerReload */ null,
       /* monitoredFiles */ liveMonitoredFiles.value.asJava,
       /* fileWatchService */ liveFileWatchService.value,
@@ -169,40 +166,6 @@ object Commands {
             }
         }
     }
-  }
-
-  val liveCommonClassloaderTask = Def.task {
-    implicit val fc: FileConverter = fileConverter.value
-
-    val classpath = (Compile / dependencyClasspath).value
-    val log = streams.value.log
-    lazy val commonJars: PartialFunction[SbtCompat.FileRef, java.net.URL] = {
-      case jar
-          if SbtCompat
-            .fileName(jar)
-            .startsWith("h2-") || SbtCompat.fileName(jar) == "h2.jar" =>
-        SbtCompat.toNioPath(jar).toUri.toURL
-    }
-
-    if (commonClassLoader == null) {
-      // The parent of the system classloader *should* be the extension classloader:
-      // https://web.archive.org/web/20060127014310/http://www.onjava.com/pub/a/onjava/2005/01/26/classloading.html
-      // We use this because this is where things like Nashorn are located. We don't use the system classloader
-      // because it will be polluted with the sbt launcher and dependencies of the sbt launcher.
-      // See https://github.com/playframework/playframework/issues/3420 for discussion.
-      val parent = ClassLoader.getSystemClassLoader.getParent
-      log.debug("Using parent loader for common classloader: " + parent)
-
-      commonClassLoader = new java.net.URLClassLoader(
-        classpath.map(_.data).collect(commonJars).toArray,
-        parent
-      ) {
-        override def toString =
-          "Common ClassLoader: " + getURLs.map(_.toString).mkString(",")
-      }
-    }
-
-    commonClassLoader
   }
 
   val liveCompileEverythingTask = Def.taskDyn {
