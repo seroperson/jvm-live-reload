@@ -15,6 +15,7 @@ case object ZioAppHookBundle extends HookBundle {
     LiveKeys.HookClassnames.ZioAppShutdown,
     LiveKeys.HookClassnames.RuntimeShutdown,
     LiveKeys.HookClassnames.RestApiHealthCheckShutdown
+    // LiveKeys.HookClassnames.ThreadGroupInterruptShutdown
   )
 }
 

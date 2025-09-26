@@ -22,6 +22,7 @@ object LiveKeys {
     val RuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
     val RestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
     val ThreadInterruptShutdown = "me.seroperson.reload.live.hook.ThreadInterruptShutdownHook"
+    // val ThreadGroupInterruptShutdown = "me.seroperson.reload.live.hook.ThreadGroupInterruptShutdownHook"
     // format: on
   }
 

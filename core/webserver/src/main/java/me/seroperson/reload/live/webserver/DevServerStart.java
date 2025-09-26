@@ -42,6 +42,7 @@ import io.undertow.util.AttachmentKey;
 public class DevServerStart implements ReloadableServer {
 
   private Undertow server;
+  private ThreadGroup appThreadGroup;
   private Thread appThread;
 
   private ClassLoader classLoader;
@@ -104,7 +105,8 @@ public class DevServerStart implements ReloadableServer {
 
   private synchronized void startInternal(ReloadGeneration generation) {
     this.classLoader = generation.getReloadedClassLoader();
-    this.appThread = new Thread(() -> {
+    // this.appThreadGroup = new ThreadGroup("reloader-" + generation.getIteration());
+    this.appThread = new Thread(/* appThreadGroup, */() -> {
       var currentThread = Thread.currentThread();
       currentThread.setName("main");
       logger.info("🚀 Starting " + mainClass);
@@ -148,6 +150,7 @@ public class DevServerStart implements ReloadableServer {
 
       runHooks(appThread, classLoader, shutdownHooks);
 
+      // appThreadGroup = null;
       appThread = null;
     }
 
