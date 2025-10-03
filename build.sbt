@@ -49,7 +49,7 @@ lazy val javaProjectSettings = Seq(
   autoScalaLibrary := false
 )
 
-lazy val `sbt-live-reload` = (projectMatrix in file("sbt"))
+lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-live-reload",
@@ -64,7 +64,7 @@ lazy val `sbt-live-reload` = (projectMatrix in file("sbt"))
     }
   )
   .jvmPlatform(scalaVersions = supportedScalaSbtVersions)
-  .dependsOn(`build-link`)
+  .dependsOn(`buildLink`)
   .dependsOn(`runner`)
 
 lazy val `webserver` = (project in file("core/webserver"))
@@ -76,7 +76,7 @@ lazy val `webserver` = (project in file("core/webserver"))
       "io.undertow" % "undertow-core" % "2.1.0.Final"
     )
   )
-  .dependsOn(`build-link`)
+  .dependsOn(`buildLink`)
 
 lazy val `runner` = (project in file("core/runner"))
   .settings(javaProjectSettings)
@@ -85,9 +85,9 @@ lazy val `runner` = (project in file("core/runner"))
     description := "Runner",
     libraryDependencies += "org.playframework" % "play-file-watch" % "3.0.0-M4"
   )
-  .dependsOn(`build-link`)
+  .dependsOn(`buildLink`)
 
-lazy val `build-link` = (project in file("core/build-link"))
+lazy val `buildLink` = (project in file("core/build-link"))
   .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-build-link",
@@ -104,4 +104,4 @@ lazy val `hooks` = (projectMatrix in file("core/hooks"))
     )
   )
   .jvmPlatform(scalaVersions = supportedScalaVersions)
-  .dependsOn(`build-link`)
+  .dependsOn(`buildLink`)

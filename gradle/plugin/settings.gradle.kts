@@ -1,6 +1,7 @@
-pluginManagement {
+dependencyResolutionManagement {
     repositories {
-        gradlePluginPortal()
+        mavenLocal()
+        mavenCentral()
     }
 }
 

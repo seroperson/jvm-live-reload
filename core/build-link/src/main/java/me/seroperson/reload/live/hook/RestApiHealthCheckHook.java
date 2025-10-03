@@ -4,7 +4,6 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpClient;
-import me.seroperson.reload.live.build.BuildLogger;
 
 /**
  * Health check hook that uses REST API calls to determine server health.

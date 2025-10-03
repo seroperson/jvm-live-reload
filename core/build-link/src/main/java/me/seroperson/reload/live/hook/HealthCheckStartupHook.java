@@ -33,7 +33,6 @@ public abstract class HealthCheckStartupHook implements HealthCheckHook {
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
-      return;
     }
   }
 

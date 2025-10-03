@@ -68,7 +68,10 @@ class DevServerReloader implements BuildLink, Closeable {
     this.triggerReload = triggerReload;
     if (!monitoredFiles.isEmpty() && fileWatchService != null) {
       // Create the watcher, updates the changed boolean when a file has changed:
-      this.watcher = fileWatchService.watch(monitoredFiles, () -> changed = true);
+      this.watcher = fileWatchService.watch(monitoredFiles, () -> {
+          changed = true;
+          return null;
+      });
     } else {
       this.watcher = null;
     }

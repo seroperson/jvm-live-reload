@@ -1,6 +1,8 @@
 pluginManagement {
     repositories {
-        gradlePluginPortal()
+        // maven(url = uri("C:/Users/seroperson/.m2"))
+        // mavenLocal()
+        // gradlePluginPortal()
     }
 }
 

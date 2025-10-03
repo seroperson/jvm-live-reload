@@ -1,5 +1,10 @@
 pluginManagement {
-    includeBuild("../plugin")
+    includeBuild("../plugin") {
+        repositories {
+            mavenLocal()
+            mavenCentral()
+        }
+    }
 }
 
 include("app")
