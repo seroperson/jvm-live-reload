@@ -22,6 +22,10 @@ java {
     }
 }
 
+liveReload {
+    settings = mapOf("live.reload.http.port" to "8081")
+}
+
 application {
     mainClass = "AppKt"
 }

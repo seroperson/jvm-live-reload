@@ -58,16 +58,11 @@ open class LiveReloadRunHandle @Inject constructor(private val params: LiveReloa
 
     override fun start(deployment: Deployment) {
         lock.writeLock().lock()
-        val settings = DevServerSettings(
-            listOf(),
-            listOf(),
-            mapOf("live.reload.debug" to "true")
-        )
         this.deployment = deployment
         try {
             devServer =
                 DevServerRunner.getInstance().run(
-                    settings,
+                    DevServerSettings(listOf(), listOf(), params.settings),
                     params.dependencyClasspath.toList(),
                     this::reloadCompile,
                     this::isChanged,
@@ -76,14 +71,8 @@ open class LiveReloadRunHandle @Inject constructor(private val params: LiveReloa
                     "me.seroperson.reload.live.webserver.DevServerStart",
                     params.mainClass,
                     lock,
-                    listOf(
-                        "me.seroperson.reload.live.hook.RestApiHealthCheckStartupHook"
-                    ),
-                    listOf(
-                        "me.seroperson.reload.live.hook.ThreadInterruptShutdownHook",
-                        "me.seroperson.reload.live.hook.RuntimeShutdownHook",
-                        "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
-                    ),
+                    params.startupHooks,
+                    params.shutdownHooks,
                     LiveReloadLogger()
                 )
         } finally {

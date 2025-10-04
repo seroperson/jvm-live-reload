@@ -6,6 +6,7 @@ import org.gradle.api.Incubating;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.MapProperty;
+import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
@@ -24,9 +25,6 @@ import org.slf4j.LoggerFactory;
 @DisableCachingByDefault(because = "Application should always run")
 abstract class LiveReloadRun @Inject constructor(private val deploymentRegistry: DeploymentRegistry) : DefaultTask() {
 
-    @get:Internal
-    abstract val workingDir: DirectoryProperty
-
     @get:Classpath
     abstract val runtimeClasspath: ConfigurableFileCollection
 
@@ -38,7 +36,13 @@ abstract class LiveReloadRun @Inject constructor(private val deploymentRegistry:
     abstract val mainClass: Property<String>
 
     @get:Input
-    abstract val devSettings: MapProperty<String, String>
+    abstract val settings: MapProperty<String, String>
+
+    @get:Input
+    abstract val startupHooks: ListProperty<String>
+
+    @get:Input
+    abstract val shutdownHooks: ListProperty<String>
 
     @get:Internal
     val isUpToDate: Boolean
@@ -55,8 +59,10 @@ abstract class LiveReloadRun @Inject constructor(private val deploymentRegistry:
             val params = LiveReloadRunParams(
                 this.runtimeClasspath.files,
                 this.classes.files,
-                this.devSettings.get(),
+                this.settings.get(),
                 this.mainClass.get(),
+                this.startupHooks.get(),
+                this.shutdownHooks.get()
             )
             deploymentRegistry.start(id, ChangeBehavior.BLOCK, LiveReloadRunHandle::class.java, params)
         } else {

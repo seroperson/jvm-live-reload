@@ -36,9 +36,10 @@ class LiveReloadPlugin : Plugin<Project> {
         return project.files(
             processResources?.destinationDir,
             compileJava?.destinationDirectory,
-            listOf("scala", "kotlin").mapNotNull { source: String ->
-                sourceSet.extensions.findByName(source) as SourceDirectorySet?
-            }
+            listOf("scala", "kotlin")
+                .mapNotNull { source: String ->
+                    sourceSet.extensions.findByName(source) as SourceDirectorySet?
+                }
                 .map { obj: SourceDirectorySet -> obj.classesDirectory }
         )
     }
@@ -59,13 +60,11 @@ class LiveReloadPlugin : Plugin<Project> {
                         t.group = APPLICATION_GROUP
                         t.dependsOn(project.tasks.findByName(CLASSES_TASK_NAME)!!)
                         t.outputs.upToDateWhen(Spec { task: Task -> (task as LiveReloadRun).isUpToDate })
-                        t.workingDir.convention(project.layout.projectDirectory)
                         t.classes.from(findClasspathDirectories(project))
-                        t.devSettings.convention(
-                                project.objects
-                                    .mapProperty(String::class.java, String::class.java)
-                            )
+                        t.settings.convention(extension.settings)
                         t.mainClass.convention(javaApplicationExtension(project).mainClass)
+                        t.startupHooks.convention(extension.startupHooks)
+                        t.shutdownHooks.convention(extension.shutdownHooks)
 
                         val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
                         t.runtimeClasspath.from(runtime.incoming.files)

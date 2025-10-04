@@ -8,7 +8,7 @@ import org.http4k.server.asServer
 
 fun main() {
     val endpoints = listOf(
-        "/greet" bind Method.GET to {
+        "/greet-reloaded" bind Method.GET to {
             Response(OK).body("Hello World")
         },
         "/health" bind Method.GET to {
@@ -16,7 +16,7 @@ fun main() {
         }
     )
 
-    routes(endpoints).asServer(SunHttp(8080)).use {
+    routes(endpoints).asServer(SunHttp(8081)).use {
         it.start()
         it.block()
     }
