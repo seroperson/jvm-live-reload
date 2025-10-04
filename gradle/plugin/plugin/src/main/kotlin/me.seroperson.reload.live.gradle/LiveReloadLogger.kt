@@ -4,7 +4,6 @@ import me.seroperson.reload.live.build.BuildLogger
 import org.slf4j.LoggerFactory
 
 class LiveReloadLogger : BuildLogger {
-
     private val logger: org.slf4j.Logger = LoggerFactory.getLogger(LiveReloadLogger::class.java)
 
     override fun debug(message: String?) {
@@ -23,7 +22,10 @@ class LiveReloadLogger : BuildLogger {
         logger.error("Error in LiveReload plugin", t)
     }
 
-    override fun error(message: String?, t: Throwable?) {
+    override fun error(
+        message: String?,
+        t: Throwable?,
+    ) {
         logger.error(message, t)
     }
 

@@ -3,11 +3,15 @@ plugins {
     `java-gradle-plugin`
 }
 
-dependencies {
-    implementation("me.seroperson:jvm-live-reload-runner:0.0.1")
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
+dependencies { implementation(libs.jvm.live.reload.runner) }
+
 group = "me.seroperson"
+
 version = "0.0.1-SNAPSHOT"
 
 gradlePlugin {

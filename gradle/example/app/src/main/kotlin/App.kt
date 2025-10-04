@@ -7,14 +7,11 @@ import org.http4k.server.SunHttp
 import org.http4k.server.asServer
 
 fun main() {
-    val endpoints = listOf(
-        "/greet-reloaded" bind Method.GET to {
-            Response(OK).body("Hello World")
-        },
-        "/health" bind Method.GET to {
-            Response(OK)
-        }
-    )
+    val endpoints =
+        listOf(
+            "/greet" bind Method.GET to { Response(OK).body("Hello World") },
+            "/health" bind Method.GET to { Response(OK) },
+        )
 
     routes(endpoints).asServer(SunHttp(8081)).use {
         it.start()

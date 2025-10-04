@@ -8,11 +8,15 @@ import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
-import org.gradle.api.file.*
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.JavaApplication
-import org.gradle.api.plugins.JavaPlugin.*
+import org.gradle.api.plugins.JavaPlugin.CLASSES_TASK_NAME
+import org.gradle.api.plugins.JavaPlugin.COMPILE_JAVA_TASK_NAME
+import org.gradle.api.plugins.JavaPlugin.PROCESS_RESOURCES_TASK_NAME
+import org.gradle.api.plugins.JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.SourceSet
@@ -21,7 +25,6 @@ import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.language.jvm.tasks.ProcessResources
 
 class LiveReloadPlugin : Plugin<Project> {
-
     override fun apply(project: Project) {
         val extension = createExtension(project)
         createRunTask(project, extension)
@@ -39,82 +42,66 @@ class LiveReloadPlugin : Plugin<Project> {
             listOf("scala", "kotlin")
                 .mapNotNull { source: String ->
                     sourceSet.extensions.findByName(source) as SourceDirectorySet?
-                }
-                .map { obj: SourceDirectorySet -> obj.classesDirectory }
+                }.map { obj: SourceDirectorySet -> obj.classesDirectory },
         )
     }
 
-    private fun createExtension(project: Project): LiveReloadExtension {
-        return project.extensions.create("liveReload", LiveReloadExtension::class.java)
-    }
+    private fun createExtension(project: Project): LiveReloadExtension =
+        project.extensions.create("liveReload", LiveReloadExtension::class.java)
 
-    private fun createRunTask(project: Project, extension: LiveReloadExtension) {
-        project
-            .tasks
-            .register(
-                "liveReloadRun",
-                LiveReloadRun::class.java,
-                object: Action<LiveReloadRun> {
-                    override fun execute(t: LiveReloadRun) {
-                        t.description = "Runs the application with the live-reload wrapper."
-                        t.group = APPLICATION_GROUP
-                        t.dependsOn(project.tasks.findByName(CLASSES_TASK_NAME)!!)
-                        t.outputs.upToDateWhen(Spec { task: Task -> (task as LiveReloadRun).isUpToDate })
-                        t.classes.from(findClasspathDirectories(project))
-                        t.settings.convention(extension.settings)
-                        t.mainClass.convention(javaApplicationExtension(project).mainClass)
-                        t.startupHooks.convention(extension.startupHooks)
-                        t.shutdownHooks.convention(extension.shutdownHooks)
+    private fun createRunTask(
+        project: Project,
+        extension: LiveReloadExtension,
+    ) {
+        project.tasks.register(
+            "liveReloadRun",
+            LiveReloadRun::class.java,
+            object : Action<LiveReloadRun> {
+                override fun execute(t: LiveReloadRun) {
+                    t.description = "Runs the application with the live-reload wrapper."
+                    t.group = APPLICATION_GROUP
+                    t.dependsOn(project.tasks.findByName(CLASSES_TASK_NAME)!!)
+                    t.outputs.upToDateWhen(Spec { task: Task -> (task as LiveReloadRun).isUpToDate })
+                    t.classes.from(findClasspathDirectories(project))
+                    t.settings.convention(extension.settings)
+                    t.mainClass.convention(javaApplicationExtension(project).mainClass)
+                    t.startupHooks.convention(extension.startupHooks)
+                    t.shutdownHooks.convention(extension.shutdownHooks)
 
-                        val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
-                        t.runtimeClasspath.from(runtime.incoming.files)
+                    val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+                    t.runtimeClasspath.from(runtime.incoming.files)
 
-                        filterProjectComponents(runtime)
-                            .forEach { path ->
-                                val child = project.findProject(path) ?: return@forEach
-                                t.classes.from(findClasspathDirectories(child))
-                                t.dependsOn(child.tasks.findByName(PROCESS_RESOURCES_TASK_NAME)!!)
-                            }
+                    filterProjectComponents(runtime).forEach { path ->
+                        val child = project.findProject(path) ?: return@forEach
+                        t.classes.from(findClasspathDirectories(child))
+                        t.dependsOn(child.tasks.findByName(PROCESS_RESOURCES_TASK_NAME)!!)
                     }
                 }
-            )
+            },
+        )
     }
 
-    fun isProjectComponent(component: ComponentIdentifier): Boolean {
-        return component is ProjectComponentIdentifier
-    }
+    private fun isProjectComponent(component: ComponentIdentifier): Boolean = component is ProjectComponentIdentifier
 
-    fun filterProjectComponents(configuration: Configuration): List<String> {
-        return synchronized(this) {
-            configuration
-                .incoming
-                .artifactView(object : Action<ArtifactView.ViewConfiguration> {
+    private fun filterProjectComponents(configuration: Configuration): List<String> =
+        configuration.incoming
+            .artifactView(
+                object : Action<ArtifactView.ViewConfiguration> {
                     override fun execute(t: ArtifactView.ViewConfiguration) {
                         t.componentFilter { value -> isProjectComponent(value) }
                     }
-                })
-                .artifacts
-            listOf()
-                /*.map {
-                    (it.variant.owner as ProjectComponentIdentifier)
-                        .projectPath
-                }*/
-        }
-    }
+                },
+            ).artifacts
+            .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }
 
-    fun javaPluginExtension(project: Project): JavaPluginExtension {
-        return extensionOf(project, JavaPluginExtension::class.java)
-    }
+    private fun javaPluginExtension(project: Project): JavaPluginExtension = extensionOf(project, JavaPluginExtension::class.java)
 
-    fun javaApplicationExtension(project: Project): JavaApplication {
-        return extensionOf(project, JavaApplication::class.java)
-    }
+    private fun javaApplicationExtension(project: Project): JavaApplication = extensionOf(project, JavaApplication::class.java)
 
-    fun mainSourceSet(project: Project): SourceSet {
-        return javaPluginExtension(project).sourceSets.getByName(MAIN_SOURCE_SET_NAME)
-    }
+    private fun mainSourceSet(project: Project): SourceSet = javaPluginExtension(project).sourceSets.getByName(MAIN_SOURCE_SET_NAME)
 
-    fun <T:Any> extensionOf(extensionAware: ExtensionAware, type: Class<T>): T {
-        return extensionAware.extensions.getByType<T>(type)!!
-    }
+    private fun <T : Any> extensionOf(
+        extensionAware: ExtensionAware,
+        type: Class<T>,
+    ): T = extensionAware.extensions.getByType<T>(type)!!
 }
