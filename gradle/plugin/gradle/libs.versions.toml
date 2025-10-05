@@ -3,6 +3,3 @@ jvm-live-reload-runner = "0.0.1"
 
 [libraries]
 jvm-live-reload-runner = { group = "me.seroperson", name = "jvm-live-reload-runner", version.ref = "jvm-live-reload-runner" }
-
-[plugins]
-spotless = { id = "com.diffplug.spotless", version = "8.0.0" }

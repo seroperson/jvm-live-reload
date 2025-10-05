@@ -4,8 +4,9 @@ import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyResolutionListener
+import org.gradle.api.artifacts.ResolvableDependencies
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.ConfigurableFileCollection
@@ -28,6 +29,20 @@ class LiveReloadPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = createExtension(project)
         createRunTask(project, extension)
+
+        val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
+        project.gradle.addListener(
+            object : DependencyResolutionListener {
+                override fun beforeResolve(resolvableDependencies: ResolvableDependencies) {
+                    runtimeDeps.add(
+                        project.dependencies.create("me.seroperson:jvm-live-reload-webserver:0.0.1"),
+                    )
+                    project.gradle.removeListener(this)
+                }
+
+                override fun afterResolve(resolvableDependencies: ResolvableDependencies) {}
+            },
+        )
     }
 
     private fun findClasspathDirectories(project: Project?): ConfigurableFileCollection? {
@@ -84,15 +99,16 @@ class LiveReloadPlugin : Plugin<Project> {
     private fun isProjectComponent(component: ComponentIdentifier): Boolean = component is ProjectComponentIdentifier
 
     private fun filterProjectComponents(configuration: Configuration): List<String> =
-        configuration.incoming
-            .artifactView(
-                object : Action<ArtifactView.ViewConfiguration> {
-                    override fun execute(t: ArtifactView.ViewConfiguration) {
-                        t.componentFilter { value -> isProjectComponent(value) }
-                    }
-                },
-            ).artifacts
-            .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }
+    /*configuration.incoming
+    .artifactView(
+        object : Action<ArtifactView.ViewConfiguration> {
+            override fun execute(t: ArtifactView.ViewConfiguration) {
+                t.componentFilter { value -> isProjectComponent(value) }
+            }
+        },
+    ).artifacts
+    .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }*/
+        listOf()
 
     private fun javaPluginExtension(project: Project): JavaPluginExtension = extensionOf(project, JavaPluginExtension::class.java)
 

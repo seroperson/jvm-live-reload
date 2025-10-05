@@ -1,7 +1,7 @@
 plugins {
-    id("me.seroperson.reload.live.gradle")
     alias(libs.plugins.kotlin.jvm)
     application
+    id("me.seroperson.reload.live.gradle")
 }
 
 repositories {
@@ -10,8 +10,6 @@ repositories {
 }
 
 dependencies {
-    implementation("me.seroperson:jvm-live-reload-webserver:0.0.1")
-
     implementation(platform("org.http4k:http4k-bom:6.18.1.0"))
     implementation("org.http4k:http4k-core")
 }
