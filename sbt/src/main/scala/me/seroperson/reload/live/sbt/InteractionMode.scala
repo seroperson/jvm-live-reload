@@ -46,8 +46,8 @@ trait InteractionMode {
   * preserve binary compatibility.
   */
 trait NonBlockingInteractionMode extends InteractionMode {
-  override def waitForCancel() = ()
-  override def doWithoutEcho(f: => Unit) = f
+  override def waitForCancel(): Unit = ()
+  override def doWithoutEcho(f: => Unit): Unit = f
 
   /** Start the server, if not already started
     *

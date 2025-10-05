@@ -2,7 +2,6 @@ package me.seroperson.reload.live.sbt
 
 import LiveReloadPlugin.autoImport.*
 import java.nio.file.Path
-import java.util.Arrays
 import java.util.function.Supplier
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
@@ -11,7 +10,7 @@ import sbt.*
 import sbt.Keys.*
 import sbt.internal.inc.Analysis
 import sbt.util.LoggerContext
-import scala.collection.JavaConverters.*
+import scala.jdk.CollectionConverters.*
 import xsbti.FileConverter
 
 /** Object containing SBT task and command implementations for live reload
@@ -127,10 +126,10 @@ object Commands {
           s"🎉 Development Live Reload server successfully started!"
         )
         sbtLog.info(
-          s"🚀 Serving at:    ${GREEN}http://${settings.getProxyHttpHost()}:${settings.getProxyHttpPort()}${RESET}"
+          s"🚀 Serving at:    ${GREEN}http://${settings.getProxyHttpHost}:${settings.getProxyHttpPort}${RESET}"
         )
         sbtLog.info(
-          s"   Proxifying to: ${GREEN}http://${settings.getHttpHost()}:${settings.getHttpPort()}${RESET}"
+          s"   Proxifying to: ${GREEN}http://${settings.getHttpHost}:${settings.getHttpPort}${RESET}"
         )
         sbtLog.info(
           s"ℹ️ Perform a first request to start the underlying server"

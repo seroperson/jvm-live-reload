@@ -19,12 +19,12 @@ class ZioZioAppShutdownHook extends Hook {
       settings: DevServerSettings,
       logger: BuildLogger
   ) = {
+    // Actually it's usually unnecessary from what I saw
     shutdownExecutor(zio.Runtime.defaultExecutor)
     shutdownExecutor(zio.Runtime.defaultBlockingExecutor)
     shutdownExecutor(zio.internal.Blocking.blockingExecutor)
 
     def shutdownExecutor(executor: Executor) = {
-      import java.io.Closeable
       import java.util.concurrent.ThreadPoolExecutor
 
       logger.debug("Shutting down zio executor: " + executor)

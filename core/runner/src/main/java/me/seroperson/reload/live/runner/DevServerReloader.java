@@ -97,14 +97,12 @@ class DevServerReloader implements BuildLink, Closeable {
   private Object reload(boolean shouldReload) {
     // Run the reload task, which will trigger everything to compile
     CompileResult compileResult = compile.get();
-    if (compileResult instanceof CompileFailure) {
-      var result = (CompileFailure) compileResult;
+    if (compileResult instanceof CompileFailure result) {
       // We force reload next time because compilation failed this time
       forceReloadNextTime = true;
       return result.getException();
-    } else if (compileResult instanceof CompileSuccess) {
-      var result = (CompileSuccess) compileResult;
-      var cp = result.getClasspath();
+    } else if (compileResult instanceof CompileSuccess result) {
+        var cp = result.getClasspath();
 
       // We only want to reload if the classpath has changed.
       // Assets don't live on the classpath, so they won't trigger a reload.
@@ -212,9 +210,5 @@ class DevServerReloader implements BuildLink, Closeable {
     currentApplicationClassLoader = null;
     if (watcher != null)
       watcher.stop();
-  }
-
-  public URLClassLoader getClassLoader() {
-    return currentApplicationClassLoader;
   }
 }

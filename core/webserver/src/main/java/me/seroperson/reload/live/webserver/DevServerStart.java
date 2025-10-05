@@ -1,55 +1,33 @@
 package me.seroperson.reload.live.webserver;
 
+import io.undertow.Undertow;
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.proxy.ProxyHandler;
 import me.seroperson.reload.live.ReloadGeneration;
-import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.BuildLink;
+import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.hook.Hook;
 import me.seroperson.reload.live.settings.DevServerSettings;
 
-import java.time.Duration;
 import java.io.Closeable;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.net.ServerSocket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.io.IOException;
-import java.net.http.HttpRequest;
-import java.net.http.HttpClient;
-import java.net.http.HttpResponse;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 import java.util.Objects;
-import java.lang.reflect.InvocationTargetException;
-import io.undertow.Undertow;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.handlers.proxy.ProxyClient;
-import io.undertow.server.handlers.proxy.ProxyHandler;
-import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
-import io.undertow.server.handlers.builder.PredicatedHandler;
-import io.undertow.server.handlers.accesslog.AccessLogHandler;
-import io.undertow.server.handlers.accesslog.JBossLoggingAccessLogReceiver;
-import io.undertow.predicate.Predicate;
-import io.undertow.predicate.PredicatesHandler;
-import io.undertow.util.AttachmentKey;
 
 public class DevServerStart implements ReloadableServer {
 
-  private Undertow server;
-  private ThreadGroup appThreadGroup;
+  private final Undertow server;
   private Thread appThread;
 
   private ClassLoader classLoader;
-  private String mainClass;
+  private final String mainClass;
 
-  private List<Hook> startupHooks;
-  private List<Hook> shutdownHooks;
+  private final List<Hook> startupHooks;
+  private final List<Hook> shutdownHooks;
 
   private final DevServerSettings settings;
   private final BuildLogger logger;
@@ -95,18 +73,18 @@ public class DevServerStart implements ReloadableServer {
 
   private Hook initHook(String className) {
     try {
-      return (Hook) Class.forName(className).newInstance();
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      return (Hook) Class.forName(className).getDeclaredConstructor().newInstance();
+    } catch (ClassNotFoundException | InstantiationException |
+             InvocationTargetException | IllegalAccessException |
+             NoSuchMethodException e) {
       logger.error("Unable to initialize hook: " + className, e);
-      e.printStackTrace();
       return null;
     }
   }
 
   private synchronized void startInternal(ReloadGeneration generation) {
     this.classLoader = generation.getReloadedClassLoader();
-    // this.appThreadGroup = new ThreadGroup("reloader-" + generation.getIteration());
-    this.appThread = new Thread(/* appThreadGroup, */() -> {
+    this.appThread = new Thread(() -> {
       var currentThread = Thread.currentThread();
       currentThread.setName("main");
       logger.info("🚀 Starting " + mainClass);
@@ -122,6 +100,9 @@ public class DevServerStart implements ReloadableServer {
         stopInternal();
         throw new RuntimeException(e);
       } catch (InvocationTargetException e) {
+        // Hard times of debugging
+        // todo: clean this mess just a little
+
         // logger.error("Got InvocationTargetException. Its' classloader: " +
         // e.getCause().getClass().getClassLoader());
         logger.debug(
@@ -200,8 +181,6 @@ public class DevServerStart implements ReloadableServer {
       logger.debug("No change in the application classes");
       return false;
     } else if (reloadResult instanceof Throwable) {
-      // case NonFatal(t) => Failure(t) // An error we can display
-      // case t: Throwable => throw t // An error that we can't handle
       throw new RuntimeException((Throwable) reloadResult);
     }
     return false;

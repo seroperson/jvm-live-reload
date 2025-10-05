@@ -11,11 +11,9 @@ case object ZioAppHookBundle extends HookBundle {
     LiveKeys.HookClassnames.RestApiHealthCheckStartup
   )
   def shutdownHooks: Seq[String] = Seq(
-    // LiveKeys.HookClassnames.ThreadInterruptShutdown,
     LiveKeys.HookClassnames.ZioAppShutdown,
     LiveKeys.HookClassnames.RuntimeShutdown,
     LiveKeys.HookClassnames.RestApiHealthCheckShutdown
-    // LiveKeys.HookClassnames.ThreadGroupInterruptShutdown
   )
 }
 

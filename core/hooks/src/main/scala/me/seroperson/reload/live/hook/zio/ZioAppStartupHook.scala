@@ -1,13 +1,9 @@
 package me.seroperson.reload.live.hook.zio;
 
-import java.io.Closeable
-import java.util.concurrent.ThreadPoolExecutor
 import me.seroperson.reload.live.build.BuildLogger
 import me.seroperson.reload.live.hook.Hook
 import me.seroperson.reload.live.hook.ReflectionUtils
-import me.seroperson.reload.live.hook.RuntimeShutdownHook
 import me.seroperson.reload.live.settings.DevServerSettings
-import zio.Executor
 
 class ZioAppStartupHook extends Hook {
 
@@ -22,7 +18,8 @@ class ZioAppStartupHook extends Hook {
       settings: DevServerSettings,
       logger: BuildLogger
   ) = {
-    // We need to update Context ClassLoader on all ZScheduler workers because they usually survive reload
+    // We need to update Context ClassLoader on all ZScheduler workers
+    // because they usually survive reload
 
     val threadGroup = Thread.currentThread.getThreadGroup
     val threads = new Array[Thread](threadGroup.activeCount)

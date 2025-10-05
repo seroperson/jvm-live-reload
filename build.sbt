@@ -53,7 +53,7 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(SbtPlugin)
   .settings(
     name := "sbt-live-reload",
-    description := "Providing an universal Live Reload expirience for web applications built with SBT",
+    description := "Providing an universal Live Reload experience for web applications built with SBT",
     scriptedBufferLog := false,
     scriptedBatchExecution := false,
     (pluginCrossBuild / sbtVersion) := {
@@ -71,9 +71,9 @@ lazy val `webserver` = (project in file("core/webserver"))
   .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-webserver",
-    description := "Development-mode webserver for Live Reload expirience on JVM",
+    description := "Development-mode proxy webserver for Live Reload experience on JVM",
     libraryDependencies ++= Seq(
-      "io.undertow" % "undertow-core" % "2.1.0.Final"
+      "io.undertow" % "undertow-core" % "2.3.19.Final"
     )
   )
   .dependsOn(`buildLink`)
@@ -82,7 +82,7 @@ lazy val `runner` = (project in file("core/runner"))
   .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-runner",
-    description := "Runner",
+    description := "Contains an universal Live Reload webserver initialization and reloading logic",
     libraryDependencies += "org.playframework" % "play-file-watch" % "3.0.0-M4"
   )
   .dependsOn(`buildLink`)
@@ -91,15 +91,15 @@ lazy val `buildLink` = (project in file("core/build-link"))
   .settings(javaProjectSettings)
   .settings(
     name := "jvm-live-reload-build-link",
-    description := "Build link"
+    description := "Contains classes which shared between build system and application runtime"
   )
 
 lazy val `hooks` = (projectMatrix in file("core/hooks"))
   .settings(
     name := "jvm-live-reload-hooks",
-    description := "Hooks",
+    description := "Predefined set of hooks for popular Scala webframeworks",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-http" % "3.3.3" % Provided,
+      "dev.zio" %% "zio-http" % "3.5.1" % Provided,
       "org.typelevel" %% "cats-effect" % "3.6.3" % Provided
     )
   )

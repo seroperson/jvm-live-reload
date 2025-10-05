@@ -15,11 +15,11 @@ import java.util.function.Function;
  */
 public class DevParameter<T> {
 
-  private String argKey;
-  private String envKey;
-  private T defaultValue;
-  private Function<T, String> toString;
-  private Function<String, T> parseValue;
+  private final String argKey;
+  private final String envKey;
+  private final T defaultValue;
+  private final Function<T, String> toString;
+  private final Function<String, T> parseValue;
   private volatile Optional<T> value;
 
   /**
