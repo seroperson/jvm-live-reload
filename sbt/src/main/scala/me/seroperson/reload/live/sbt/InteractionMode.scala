@@ -153,7 +153,7 @@ object StaticNonBlockingInteractionMode extends NonBlockingInteractionMode {
     */
   def stop() = synchronized {
     current match {
-      case None => println("Not stopping server since none is started")
+      case None         => println("Not stopping server since none is started")
       case Some(server) =>
         println("Stopping server")
         server.close()

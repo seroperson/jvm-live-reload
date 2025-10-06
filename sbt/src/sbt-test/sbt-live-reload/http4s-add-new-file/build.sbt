@@ -1,20 +1,4 @@
-import java.net.URI
-import java.net.http.{HttpRequest, HttpResponse, HttpClient}
-import scala.util.Using
-
 val Http4sVersion = "0.23.30"
-
-def verifyResourceContains(path: String, expectedStatus: Int, expectedBody: Option[String]) = Using(HttpClient.newHttpClient()) { client =>
-  val request = HttpRequest.newBuilder.uri(new URI("http://localhost:9000" + path)).GET.build
-  val response = client.send(request, HttpResponse.BodyHandlers.ofString)
-  val body = response.body()
-  if (body != expectedBody.getOrElse("")) {
-    sys.error(s"Body doesn't match: ${body} != ${expectedBody.getOrElse("")}")
-  }
-  if (response.statusCode != expectedStatus) {
-    sys.error(s"Status doesn't match: ${response.statusCode} != ${expectedStatus}")
-  }
-}.get
 
 enablePlugins(LiveReloadPlugin)
 
@@ -28,7 +12,18 @@ libraryDependencies ++= Seq(
 )
 
 InputKey[Unit]("verifyResourceContains") := {
+  import sttp.client4.quick._
+  import sttp.client4.Response
+
   val args = Def.spaceDelimited("<path> <status> <words> ...").parsed
   val path :: status :: assertions = args
-  verifyResourceContains(path, status.toInt, assertions.headOption)
+
+  val response: Response[String] = quickRequest
+    .get(uri"http://localhost:9000/${path}")
+    .send()
+
+  assert(response.code.code.toString == status)
+  assertions.foreach { v =>
+    assert(response.body == v)
+  }
 }

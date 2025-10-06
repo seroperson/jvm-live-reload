@@ -16,43 +16,43 @@ import java.util.Arrays;
  */
 public class NamedURLClassLoader extends URLClassLoader {
 
-  private final String name;
+    private final String name;
 
-  /**
-   * Creates a new NamedURLClassLoader.
-   *
-   * @param name the descriptive name for this ClassLoader
-   * @param urls the URLs from which to load classes and resources
-   * @param parent the parent ClassLoader
-   */
-  public NamedURLClassLoader(String name, URL[] urls, ClassLoader parent) {
-    super(urls, parent);
-    this.name = name;
-  }
+    /**
+     * Creates a new NamedURLClassLoader.
+     *
+     * @param name   the descriptive name for this ClassLoader
+     * @param urls   the URLs from which to load classes and resources
+     * @param parent the parent ClassLoader
+     */
+    public NamedURLClassLoader(String name, URL[] urls, ClassLoader parent) {
+        super(urls, parent);
+        this.name = name;
+    }
 
-  @Override
-  public URL findResource(String name) {
-    // if (System.out != null) {
-    // System.out.println(this.name + ": trying to get resource via findResource: " + name);
-    // }
-    return super.findResource(name);
-  }
+    @Override
+    public URL findResource(String name) {
+        // if (System.out != null) {
+        // System.out.println(this.name + ": trying to get resource via findResource: " + name);
+        // }
+        return super.findResource(name);
+    }
 
-  @Override
-  public Enumeration<URL> getResources(String name) throws IOException {
-    // if (System.out != null) {
-    // System.out.println(this.name + ": trying to get resource via getResources: " + name);
-    // }
-    return super.getResources(name);
-  }
+    @Override
+    public Enumeration<URL> getResources(String name) throws IOException {
+        // if (System.out != null) {
+        // System.out.println(this.name + ": trying to get resource via getResources: " + name);
+        // }
+        return super.getResources(name);
+    }
 
-  /**
-   * Returns a string representation that includes the name and URLs.
-   *
-   * @return a string in the format "name[url1, url2, ...]"
-   */
-  @Override
-  public String toString() {
-    return name + Arrays.toString(getURLs());
-  }
+    /**
+     * Returns a string representation that includes the name and URLs.
+     *
+     * @return a string in the format "name[url1, url2, ...]"
+     */
+    @Override
+    public String toString() {
+        return name + Arrays.toString(getURLs());
+    }
 }

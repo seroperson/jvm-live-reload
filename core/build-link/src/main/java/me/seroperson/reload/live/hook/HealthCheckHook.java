@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpClient;
+
 import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.settings.DevServerSettings;
 
@@ -17,14 +18,14 @@ import me.seroperson.reload.live.settings.DevServerSettings;
  */
 interface HealthCheckHook extends Hook {
 
-  /**
-   * Checks if the server at the specified host and port is healthy.
-   *
-   * @param path the health check path
-   * @param host the hostname or IP address to check
-   * @param port the port number to check
-   * @return true if the server is healthy, false otherwise
-   */
-  boolean isHealthy(String path, String host, int port);
+    /**
+     * Checks if the server at the specified host and port is healthy.
+     *
+     * @param path the health check path
+     * @param host the hostname or IP address to check
+     * @param port the port number to check
+     * @return true if the server is healthy, false otherwise
+     */
+    boolean isHealthy(String path, String host, int port);
 
 }

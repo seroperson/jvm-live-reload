@@ -11,6 +11,6 @@ import me.seroperson.reload.live.build.BuildLogger;
  * and is ready to handle requests.
  */
 public class RestApiHealthCheckStartupHook extends HealthCheckStartupHook
-    implements RestApiHealthCheckHook {
+        implements RestApiHealthCheckHook {
 
 }

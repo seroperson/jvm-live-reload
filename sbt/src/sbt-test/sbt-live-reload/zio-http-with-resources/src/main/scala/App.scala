@@ -1,8 +1,8 @@
+import scala.io.Source
 import zio._
 import zio.config.magnolia._
 import zio.config.typesafe._
 import zio.http._
-import scala.io.Source
 
 case class TestRootConfig(a: Int)
 

@@ -1,0 +1,39 @@
+name: Build
+
+env:
+  JDK_JAVA_OPTIONS: |
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  compile-all:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check code format
+        uses: jrouly/scalafmt-native-action@v1
+        with:
+          version: "3.9.9"
+          arguments: "-c .scalafmt.conf --test sbt core"
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "sbt"
+      - name: Setup sbt launcher
+        uses: sbt/setup-sbt@v1
+      - name: Build and test
+        run: sbt publishM2 && sbt "sbt-live-reload/scripted"

@@ -78,14 +78,14 @@ object LiveReloadPlugin extends AutoPlugin {
     ),
     liveStartupHooks := SbtCompat.uncached((liveHookBundle.value match {
       case Some(hookBundle) => hookBundle.startupHooks
-      case None =>
+      case None             =>
         Seq(
           HookClassnames.RestApiHealthCheckStartup
         )
     })),
     liveShutdownHooks := SbtCompat.uncached((liveHookBundle.value match {
       case Some(hookBundle) => hookBundle.shutdownHooks
-      case None =>
+      case None             =>
         Seq(
           HookClassnames.ThreadInterruptShutdown,
           HookClassnames.RestApiHealthCheckShutdown

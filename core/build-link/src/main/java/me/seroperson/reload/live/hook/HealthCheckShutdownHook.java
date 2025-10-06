@@ -13,28 +13,28 @@ import me.seroperson.reload.live.settings.DevServerSettings;
  */
 public abstract class HealthCheckShutdownHook implements HealthCheckHook {
 
-  @Override
-  public String description() {
-    return "Waits for health-check to return false";
-  }
-
-  @Override
-  public boolean isAvailable() {
-    return true;
-  }
-
-  @Override
-  public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
-    try {
-      logger.debug("Starting HealthCheckShutdownHook");
-      while (isHealthy(settings.getHealthCheckPath(), settings.getHttpHost(),
-          settings.getHttpPort())) {
-        logger.debug("Waiting for the health-check to return false ...");
-        Thread.sleep(50L);
-      }
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+    @Override
+    public String description() {
+        return "Waits for health-check to return false";
     }
-  }
+
+    @Override
+    public boolean isAvailable() {
+        return true;
+    }
+
+    @Override
+    public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
+        try {
+            logger.debug("Starting HealthCheckShutdownHook");
+            while (isHealthy(settings.getHealthCheckPath(), settings.getHttpHost(),
+                    settings.getHttpPort())) {
+                logger.debug("Waiting for the health-check to return false ...");
+                Thread.sleep(50L);
+            }
+        } catch (InterruptedException e) {
+            logger.error(e);
+        }
+    }
 
 }

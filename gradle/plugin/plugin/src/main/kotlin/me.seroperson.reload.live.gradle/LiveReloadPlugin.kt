@@ -99,22 +99,25 @@ class LiveReloadPlugin : Plugin<Project> {
     private fun isProjectComponent(component: ComponentIdentifier): Boolean = component is ProjectComponentIdentifier
 
     private fun filterProjectComponents(configuration: Configuration): List<String> =
-    /*configuration.incoming
-    .artifactView(
-        object : Action<ArtifactView.ViewConfiguration> {
-            override fun execute(t: ArtifactView.ViewConfiguration) {
-                t.componentFilter { value -> isProjectComponent(value) }
-            }
-        },
-    ).artifacts
-    .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }*/
+        /*configuration.incoming
+        .artifactView(
+            object : Action<ArtifactView.ViewConfiguration> {
+                override fun execute(t: ArtifactView.ViewConfiguration) {
+                    t.componentFilter { value -> isProjectComponent(value) }
+                }
+            },
+        ).artifacts
+        .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }*/
         listOf()
 
-    private fun javaPluginExtension(project: Project): JavaPluginExtension = extensionOf(project, JavaPluginExtension::class.java)
+    private fun javaPluginExtension(project: Project): JavaPluginExtension =
+        extensionOf(project, JavaPluginExtension::class.java)
 
-    private fun javaApplicationExtension(project: Project): JavaApplication = extensionOf(project, JavaApplication::class.java)
+    private fun javaApplicationExtension(project: Project): JavaApplication =
+        extensionOf(project, JavaApplication::class.java)
 
-    private fun mainSourceSet(project: Project): SourceSet = javaPluginExtension(project).sourceSets.getByName(MAIN_SOURCE_SET_NAME)
+    private fun mainSourceSet(project: Project): SourceSet =
+        javaPluginExtension(project).sourceSets.getByName(MAIN_SOURCE_SET_NAME)
 
     private fun <T : Any> extensionOf(
         extensionAware: ExtensionAware,

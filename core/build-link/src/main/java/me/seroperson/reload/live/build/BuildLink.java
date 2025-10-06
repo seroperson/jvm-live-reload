@@ -13,21 +13,21 @@ import java.util.Map;
  */
 public interface BuildLink {
 
-  /**
-   * Check if anything has changed, and if so, return an updated classloader.
-   *
-   * <p>
-   * This method is called multiple times on every request, so it is advised that change detection
-   * happens asynchronously to this call, and that this call just check a boolean.
-   *
-   * @return Either
-   *         <ul>
-   *         <li>Throwable - If something went wrong (eg, a compile error).
-   *         <li>ClassLoader - If the classloader has changed, and the application should be
-   *         reloaded.
-   *         <li>null - If nothing changed.
-   *         </ul>
-   */
-  Object reload();
+    /**
+     * Check if anything has changed, and if so, return an updated classloader.
+     *
+     * <p>
+     * This method is called multiple times on every request, so it is advised that change detection
+     * happens asynchronously to this call, and that this call just check a boolean.
+     *
+     * @return Either
+     * <ul>
+     * <li>Throwable - If something went wrong (eg, a compile error).
+     * <li>ClassLoader - If the classloader has changed, and the application should be
+     * reloaded.
+     * <li>null - If nothing changed.
+     * </ul>
+     */
+    Object reload();
 
 }

@@ -1,6 +1,7 @@
 package me.seroperson.reload.live.runner;
 
 import java.io.Closeable;
+
 import me.seroperson.reload.live.build.BuildLink;
 
 /**
@@ -13,18 +14,18 @@ import me.seroperson.reload.live.build.BuildLink;
  */
 public interface DevServer extends Closeable {
 
-  /**
-   * Gets the build link associated with this development server.
-   *
-   * @return the BuildLink instance for compilation and reload operations
-   */
-  BuildLink buildLink();
+    /**
+     * Gets the build link associated with this development server.
+     *
+     * @return the BuildLink instance for compilation and reload operations
+     */
+    BuildLink buildLink();
 
-  /**
-   * Triggers a reload of the application if changes are detected.
-   *
-   * @return true if the application was reloaded, false if no reload was necessary
-   */
-  boolean reload();
+    /**
+     * Triggers a reload of the application if changes are detected.
+     *
+     * @return true if the application was reloaded, false if no reload was necessary
+     */
+    boolean reload();
 
 }

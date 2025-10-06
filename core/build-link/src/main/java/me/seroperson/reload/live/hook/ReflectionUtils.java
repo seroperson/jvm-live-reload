@@ -4,7 +4,8 @@ import me.seroperson.reload.live.build.BuildLogger;
 
 import java.util.IdentityHashMap;
 
-/** Utility object for reflection-based operations in hook implementations.
+/**
+ * Utility object for reflection-based operations in hook implementations.
  * <p>
  * This object provides methods for checking class availability and managing
  * application shutdown hooks via reflection, which is useful for live reload
@@ -12,24 +13,24 @@ import java.util.IdentityHashMap;
  */
 public class ReflectionUtils {
 
-    /** Checks if a class with the given name is available on the classpath.
+    /**
+     * Checks if a class with the given name is available on the classpath.
      *
-     * @param className
-     *   the fully qualified class name to check
-     * @return
-     *   true if the class is available, false otherwise
+     * @param className the fully qualified class name to check
+     * @return true if the class is available, false otherwise
      */
     public static boolean hasClass(String className) {
         try {
             Class.forName(className);
             return true;
-        } catch(ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             return false;
         }
     }
 
-    
-    /** Runs all registered application shutdown hooks via reflection.
+
+    /**
+     * Runs all registered application shutdown hooks via reflection.
      * <p>
      * This method uses reflection to access the internal
      * ApplicationShutdownHooks class and run all registered shutdown hooks.
@@ -37,9 +38,8 @@ public class ReflectionUtils {
      * application from thinking it's permanently in shutdown state, which is
      * essential for live reload functionality.
      *
-     * @note
-     *   This method uses internal JVM APIs and may not work on all JVM
-     *   implementations
+     * @note This method uses internal JVM APIs and may not work on all JVM
+     * implementations
      */
     public static void runApplicationShutdownHooks(BuildLogger logger) {
         try {
@@ -56,7 +56,7 @@ public class ReflectionUtils {
             hooksField.setAccessible(true);
             hooksField.set(null, new IdentityHashMap<Thread, Thread>());
             logger.debug("java.lang.ApplicationShutdownHooks.hooks were invalidated successfully");
-        } catch(Exception e) {
+        } catch (Exception e) {
             logger.error("Failed to run shutdown hooks via reflection", e);
         }
     }
