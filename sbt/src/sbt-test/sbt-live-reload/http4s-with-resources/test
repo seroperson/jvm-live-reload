@@ -2,8 +2,8 @@
 > bgRun
 
 # Existing file change detection
-> verifyResourceContains /greet 200 "Hello World 1"
+> verifyResourceContains greet 200 "Hello World 1"
 $ copy-file changes/App.scala.1 src/main/scala/App.scala
 $ copy-file changes/application.conf.1 src/main/resources/application.conf
-> verifyResourceContains /greet_reloaded 200 "World Hello 2"
-> verifyResourceContains /greet 404 "Not found"
+> verifyResourceContains greet_reloaded 200 "World Hello 2"
+> verifyResourceContains greet 404 "Not found"

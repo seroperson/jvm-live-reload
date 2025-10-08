@@ -24,6 +24,7 @@ case object IoAppHookBundle extends HookBundle {
   )
   def shutdownHooks: Seq[String] = Seq(
     LiveKeys.HookClassnames.ThreadInterruptShutdown,
+    LiveKeys.HookClassnames.RuntimeShutdown,
     LiveKeys.HookClassnames.IoAppShutdown,
     LiveKeys.HookClassnames.RestApiHealthCheckShutdown
   )

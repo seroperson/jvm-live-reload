@@ -100,4 +100,5 @@ SOFTWARE.
 ```
 
 [1]: https://github.com/jj-vcs/jj
+
 [2]: https://github.com/playframework/playframework

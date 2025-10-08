@@ -45,7 +45,7 @@ object App extends IOApp.Simple {
         EmberServerBuilder
           .default[F]
           .withHost(ipv4"0.0.0.0")
-          .withPort(port"8080")
+          .withPort(Port.fromInt(me.seroperson.BuildInfo.port).get)
           .withHttpApp(httpApp)
           .build
     } yield ()

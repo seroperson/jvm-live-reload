@@ -27,7 +27,7 @@ object GreetingServer extends ZIOAppDefault {
   def run = Server
     .serve(routes)
     .provide(
-      Server.default,
+      Server.defaultWithPort(me.seroperson.BuildInfo.port),
       ZLayer.fromZIO {
         TypesafeConfigProvider
           .fromResourcePath()

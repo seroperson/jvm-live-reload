@@ -35,5 +35,7 @@ jobs:
           cache: "sbt"
       - name: Setup sbt launcher
         uses: sbt/setup-sbt@v1
-      - name: Build and test
-        run: sbt publishM2 && sbt "sbt-live-reload/scripted"
+      - name: Publish local
+        run: sbt publishM2
+      - name: Scripted tests
+        run: sbt scripted

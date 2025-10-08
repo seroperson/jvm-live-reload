@@ -2,6 +2,9 @@ package me.seroperson.reload.live.hook;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 /**
  * Health check hook that uses REST API calls to determine server health.

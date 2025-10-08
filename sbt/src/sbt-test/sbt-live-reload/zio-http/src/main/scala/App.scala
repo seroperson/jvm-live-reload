@@ -11,5 +11,7 @@ object GreetingServer extends ZIOAppDefault {
         Response.ok
       }
     )
-  def run = Server.serve(routes).provide(Server.default)
+  def run = Server
+    .serve(routes)
+    .provide(Server.defaultWithPort(me.seroperson.BuildInfo.port))
 }

@@ -1,5 +1,7 @@
 object App extends cask.MainRoutes {
 
+  override def port: Int = me.seroperson.BuildInfo.port
+
   @cask.get("/greet")
   def greet() = {
     "Hello World"
