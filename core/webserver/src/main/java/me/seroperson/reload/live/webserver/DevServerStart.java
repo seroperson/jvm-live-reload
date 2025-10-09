@@ -131,7 +131,6 @@ public class DevServerStart implements ReloadableServer {
 
             runHooks(appThread, classLoader, shutdownHooks);
 
-            // appThreadGroup = null;
             appThread = null;
         }
 

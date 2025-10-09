@@ -94,9 +94,9 @@ lazy val `buildLink` = (project in file("core/build-link"))
     description := "Contains classes which shared between build system and application runtime"
   )
 
-lazy val `hooks` = (projectMatrix in file("core/hooks"))
+lazy val `hookScala` = (projectMatrix in file("core/hook-scala"))
   .settings(
-    name := "jvm-live-reload-hooks",
+    name := "jvm-live-reload-hook-scala",
     description := "Predefined set of hooks for popular Scala webframeworks",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-http" % "3.5.1" % Provided,

@@ -37,7 +37,6 @@ case object CaskAppHookBundle extends HookBundle {
   def shutdownHooks: Seq[String] = Seq(
     LiveKeys.HookClassnames.ThreadInterruptShutdown,
     LiveKeys.HookClassnames.RuntimeShutdown,
-    LiveKeys.HookClassnames.CaskShutdown,
     LiveKeys.HookClassnames.RestApiHealthCheckShutdown
   )
 }
