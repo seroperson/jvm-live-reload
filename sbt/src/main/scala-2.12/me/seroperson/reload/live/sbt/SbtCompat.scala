@@ -1,10 +1,9 @@
 package me.seroperson.reload.live.sbt
 
+import java.nio.file.Path as NioPath
 import sbt.*
 import sbt.Def.Classpath
 import xsbti.FileConverter
-
-import java.nio.file.Path as NioPath
 
 /** Compatibility layer for SBT 2.12 (older SBT versions).
   *

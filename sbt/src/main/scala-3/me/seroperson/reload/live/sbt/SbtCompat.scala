@@ -1,10 +1,10 @@
 package me.seroperson.reload.live.sbt
 
+import java.nio.file.Path as NioPath
 import sbt.*
 import sbt.Def.Classpath
-import xsbti.{FileConverter, VirtualFileRef}
-
-import java.nio.file.Path as NioPath
+import xsbti.FileConverter
+import xsbti.VirtualFileRef
 
 /** Compatibility layer for SBT 2 (newer SBT versions).
   *
