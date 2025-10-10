@@ -4,9 +4,6 @@ lazy val scala3 = "3.7.2"
 lazy val supportedScalaVersions = List(scala212, scala213, scala3)
 lazy val supportedScalaSbtVersions = List(scala212, scala3)
 
-version := "0.0.1"
-organization := "me.seroperson"
-
 scalacOptions ++= Seq(
   "-deprecation",
   "-feature",
@@ -19,9 +16,8 @@ scalacOptions ++= Seq(
     case _            => Seq.empty
   })
 
-javacOptions ++= Seq("-encoding", "UTF-8", "-Xlint:-options")
-
 // Publishing settings
+organization := "me.seroperson"
 licenses := List("MIT" -> url("https://opensource.org/licenses/MIT"))
 homepage := Some(url("https://github.com/seroperson/jvm-live-reload"))
 scmInfo := Some(
@@ -38,10 +34,6 @@ developers := List(
     url = url("https://seroperson.me/")
   )
 )
-
-// Don't publish documentation
-Compile / doc / sources := Seq.empty
-Compile / packageDoc / publishArtifact := false
 
 lazy val javaProjectSettings = Seq(
   crossScalaVersions := List(scala212),
