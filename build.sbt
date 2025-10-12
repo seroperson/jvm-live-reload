@@ -43,6 +43,7 @@ lazy val javaProjectSettings = Seq(
 
 lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(SbtPlugin)
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "sbt-live-reload",
     description := "Providing an universal Live Reload experience for web applications built with SBT",
@@ -53,7 +54,10 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
         case "2.12" => "1.10.10"
         case _      => "2.0.0-RC4"
       }
-    }
+    },
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "me.seroperson.reload.live.sbt",
+    scriptedLaunchOpts += version.apply { v => s"-Dproject.version=$v" }.value
   )
   .jvmPlatform(scalaVersions = supportedScalaSbtVersions)
   .dependsOn(`buildLink`)

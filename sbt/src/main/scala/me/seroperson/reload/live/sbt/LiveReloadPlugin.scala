@@ -1,9 +1,5 @@
 package me.seroperson.reload.live.sbt
 
-import java.util.function.Supplier
-import me.seroperson.reload.live.hook.Hook
-import me.seroperson.reload.live.runner.CompileResult
-import me.seroperson.reload.live.runner.DevServerRunner
 import play.dev.filewatch.FileWatchService
 import play.dev.filewatch.LoggerProxy
 import sbt.*
@@ -38,8 +34,8 @@ object LiveReloadPlugin extends AutoPlugin {
 
   override lazy val projectSettings = Seq(
     libraryDependencies ++= Seq(
-      "me.seroperson" % "jvm-live-reload-webserver" % "0.0.1",
-      "me.seroperson" %% "jvm-live-reload-hook-scala" % "0.0.1"
+      "me.seroperson" % "jvm-live-reload-webserver" % BuildInfo.version,
+      "me.seroperson" %% "jvm-live-reload-hook-scala" % BuildInfo.version
     ),
     liveFileWatchService := FileWatchService.detect(
       pollInterval.value.toMillis.toInt,
