@@ -35,6 +35,11 @@ developers := List(
   )
 )
 
+// `mill` and `gradle` read current version from this file
+lazy val catVersion =
+  taskKey[Unit]("Outputs current version to `version.properties` file.")
+catVersion := IO.write(file("version.properties"), s"${version.value}")
+
 lazy val javaProjectSettings = Seq(
   crossScalaVersions := List(scala212),
   crossPaths := false,
@@ -69,7 +74,7 @@ lazy val `webserver` = (project in file("core/webserver"))
     name := "jvm-live-reload-webserver",
     description := "Development-mode proxy webserver for Live Reload experience on JVM",
     libraryDependencies ++= Seq(
-      "io.undertow" % "undertow-core" % "2.3.19.Final"
+      "io.undertow" % "undertow-core" % "2.3.20.Final"
     )
   )
   .dependsOn(`buildLink`)

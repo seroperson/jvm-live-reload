@@ -37,9 +37,9 @@ public class ReflectionUtils {
      * After running the hooks, it resets the hooks field to prevent the
      * application from thinking it's permanently in shutdown state, which is
      * essential for live reload functionality.
-     *
-     * @note This method uses internal JVM APIs and may not work on all JVM
-     * implementations
+     * <p>
+     * This method uses internal JVM APIs and may not work on all JVM
+     * implementations.
      */
     public static void runApplicationShutdownHooks(BuildLogger logger) {
         try {

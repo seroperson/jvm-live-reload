@@ -25,8 +25,8 @@ val port = settingKey[Int]("port")
 port := (if (isSbt2.value) 8081 else 8080)
 
 liveDevSettings := Seq(
-  "live.reload.proxy.http.port" -> proxyPort.value.toString,
-  "live.reload.http.port" -> port.value.toString
+  DevSettingsKeys.LiveReloadProxyHttpPort -> proxyPort.value.toString,
+  DevSettingsKeys.LiveReloadHttpPort -> port.value.toString
 )
 
 buildInfoKeys := Seq[BuildInfoKey](port)

@@ -1,7 +1,7 @@
 package me.seroperson.reload.live.sbt
 
 import java.io.File
-import java.net.URL
+import me.seroperson.reload.live.settings.DevServerSettings
 import play.dev.filewatch.FileWatchService
 import sbt.Keys.Classpath
 import sbt.internal.inc.Analysis
@@ -21,6 +21,17 @@ object LiveKeys {
     val RuntimeShutdown = "me.seroperson.reload.live.hook.RuntimeShutdownHook"
     val RestApiHealthCheckShutdown = "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook"
     val ThreadInterruptShutdown = "me.seroperson.reload.live.hook.ThreadInterruptShutdownHook"
+    // format: on
+  }
+
+  object DevSettingsKeys {
+    // format: off
+    val LiveReloadProxyHttpHost: String = DevServerSettings.LiveReloadProxyHttpHost
+    val LiveReloadProxyHttpPort: String = DevServerSettings.LiveReloadProxyHttpPort
+    val LiveReloadHttpHost: String = DevServerSettings.LiveReloadHttpHost
+    val LiveReloadHttpPort: String = DevServerSettings.LiveReloadHttpPort
+    val LiveReloadHealthPath: String = DevServerSettings.LiveReloadHealthPath
+    val LiveReloadIsDebug: String = DevServerSettings.LiveReloadIsDebug
     // format: on
   }
 

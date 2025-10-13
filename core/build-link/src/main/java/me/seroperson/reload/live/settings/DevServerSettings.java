@@ -24,28 +24,34 @@ import java.util.stream.Collectors;
 public class DevServerSettings {
 
     private static final Pattern SYSTEM_PROPERTY = Pattern.compile("-D([^=]+)=(.*)");
+    public static final String LiveReloadProxyHttpHost = "live.reload.proxy.http.host";
+    public static final String LiveReloadProxyHttpPort = "live.reload.proxy.http.port";
+    public static final String LiveReloadHttpHost = "live.reload.http.host";
+    public static final String LiveReloadHttpPort = "live.reload.http.port";
+    public static final String LiveReloadHealthPath = "live.reload.http.health";
+    public static final String LiveReloadIsDebug = "live.reload.debug";
 
     private final Map<String, String> javaOptionProperties;
     private final Map<String, String> argsProperties;
     private final Map<String, String> pluginSettings;
 
     private final DevParameter<Integer> proxyHttpPort =
-            new DevParameter<Integer>("live.reload.proxy.http.port", "LIVE_RELOAD_PROXY_HTTP_PORT", 9000,
+            new DevParameter<>(LiveReloadProxyHttpPort, "LIVE_RELOAD_PROXY_HTTP_PORT", 9000,
                     String::valueOf, Integer::parseInt);
     private final DevParameter<String> proxyHttpHost =
-            new DevParameter<String>("live.reload.proxy.http.host", "LIVE_RELOAD_PROXY_HTTP_HOST",
+            new DevParameter<>(LiveReloadProxyHttpHost, "LIVE_RELOAD_PROXY_HTTP_HOST",
                     "0.0.0.0", String::valueOf, Function.identity());
 
-    private final DevParameter<Integer> httpPort = new DevParameter<Integer>("live.reload.http.port",
+    private final DevParameter<Integer> httpPort = new DevParameter<>(LiveReloadHttpPort,
             "LIVE_RELOAD_HTTP_PORT", 8080, String::valueOf, Integer::parseInt);
-    private final DevParameter<String> httpHost = new DevParameter<String>("live.reload.http.host",
+    private final DevParameter<String> httpHost = new DevParameter<>(LiveReloadHttpHost,
             "LIVE_RELOAD_HTTP_HOST", "localhost", String::valueOf, Function.identity());
 
     private final DevParameter<String> healthCheckPath =
-            new DevParameter<String>("live.reload.http.healthcheck", "LIVE_RELOAD_HTTP_HEALTH_CHECK_PATH",
+            new DevParameter<>(LiveReloadHealthPath, "LIVE_RELOAD_HTTP_HEALTH_CHECK_PATH",
                     "/health", String::valueOf, Function.identity());
 
-    private final DevParameter<Boolean> debug = new DevParameter<Boolean>("live.reload.debug",
+    private final DevParameter<Boolean> debug = new DevParameter<>(LiveReloadIsDebug,
             "LIVE_RELOAD_DEBUG", false, String::valueOf, Boolean::parseBoolean);
 
     /**

@@ -6,6 +6,7 @@ mill.*
 # sbt output
 target/
 .sbt/
+version.properties
 
 # gradle output
 .gradle/
