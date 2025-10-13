@@ -6,7 +6,7 @@ mill.*
 # sbt output
 target/
 .sbt/
-version.properties
+version.txt
 
 # gradle output
 .gradle/
@@ -23,4 +23,3 @@ gradle/**/build
 metals.sbt
 .bloop/
 *.semanticdb
-

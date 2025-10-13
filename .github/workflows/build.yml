@@ -35,7 +35,10 @@ jobs:
           cache: "sbt"
       - name: Setup sbt launcher
         uses: sbt/setup-sbt@v1
-      - name: Publish local
-        run: sbt publishM2
+      - uses: extractions/setup-just@v3
+      - name: Publish Local sbt
+        run: just publish-local-sbt
+      - name: Check code formatting
+        run: just code-format-check-gradle
       - name: Scripted tests
-        run: sbt scripted
+        run: just test-sbt

@@ -7,8 +7,8 @@ env:
 
 on:
   push:
-    branches: [ main ]
-    tags: [ "**" ]
+    branches: [main]
+    tags: ["**"]
 
 jobs:
   publish:
@@ -26,10 +26,16 @@ jobs:
           cache: sbt
       - name: Setup sbt launcher
         uses: sbt/setup-sbt@v1
-      - name: Run ci-release
-        run: sbt ci-release
+      - uses: extractions/setup-just@v3
+      - name: Publish sbt
+        run: just publish-sbt
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      - name: Publish Gradle (if not SNAPSHOT)
+        run: just publish-gradle || true
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.PGP_PASSPHRASE }}
+          GRADLE_SECRET_KEY: ${{ secrets.PGP_SECRET }}

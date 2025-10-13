@@ -1,23 +1,47 @@
 plugins {
     `kotlin-dsl`
     `java-gradle-plugin`
+    id("com.gradle.plugin-publish") version "2.0.0"
+    id("com.github.gmazzo.buildconfig") version "5.7.0"
 }
 
 repositories {
+    maven("https://central.sonatype.com/repository/maven-snapshots/")
     mavenLocal()
     mavenCentral()
 }
 
-dependencies { implementation(libs.jvm.live.reload.runner) }
+dependencies { implementation("me.seroperson:jvm-live-reload-runner:${readVersion()}") }
+
+fun readVersion() =
+    listOf(
+        "$projectDir/version.txt",
+        "$projectDir/../version.txt",
+        "$projectDir/../../version.txt",
+        "$projectDir/../../../version.txt",
+    ).map { file(it) }
+        .firstOrNull { it.exists() }
+        ?.readText() ?: "0.0.1-SNAPSHOT"
 
 group = "me.seroperson"
 
-version = "0.0.1-SNAPSHOT"
+version = readVersion()
+
+buildConfig {
+    packageName("me.seroperson.reload.live.gradle")
+    buildConfigField("VERSION", readVersion())
+}
 
 gradlePlugin {
+    website = "https://github.com/seroperson/jvm-live-reload"
+    vcsUrl = "https://github.com/seroperson/jvm-live-reload"
     plugins {
-        create("me.seroperson.reload.live.gradle") {
+        create("liveReloadPlugin") {
             id = "me.seroperson.reload.live.gradle"
+            displayName = "Live Reload for Web Applications"
+            description =
+                "Provides an universal Live Reload experience for web applications built with Gradle"
+            tags = listOf("liveReload", "hotReload", "reload")
             implementationClass = "me.seroperson.reload.live.gradle.LiveReloadPlugin"
         }
     }

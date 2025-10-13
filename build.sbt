@@ -23,7 +23,8 @@ homepage := Some(url("https://github.com/seroperson/jvm-live-reload"))
 scmInfo := Some(
   ScmInfo(
     url("https://github.com/seroperson/jvm-live-reload"),
-    "scm:git@github.com:seroperson/jvm-live-reload.git"
+    "scm:git:git://github.com/seroperson/jvm-live-reload.git",
+    Some("scm:git:ssh://git@github.com/seroperson/jvm-live-reload.git")
   )
 )
 developers := List(
@@ -37,8 +38,22 @@ developers := List(
 
 // `mill` and `gradle` read current version from this file
 lazy val catVersion =
-  taskKey[Unit]("Outputs current version to `version.properties` file.")
-catVersion := IO.write(file("version.properties"), s"${version.value}")
+  taskKey[Unit]("Outputs current version to `version.txt` file.")
+catVersion := {
+  val versionFile = file("version.txt")
+  streams.value.log.info(s"Writing version to ${versionFile.getAbsolutePath}")
+  IO.write(versionFile, s"${version.value}")
+}
+
+// if version was pinned already, read from file, otherwise generate new
+version := {
+  val versionFile = file("version.txt")
+  if (versionFile.exists()) {
+    IO.read(versionFile)
+  } else {
+    version.value
+  }
+}
 
 lazy val javaProjectSettings = Seq(
   crossScalaVersions := List(scala212),
@@ -51,13 +66,13 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "sbt-live-reload",
-    description := "Providing an universal Live Reload experience for web applications built with SBT",
+    description := "Provides an universal Live Reload experience for web applications built with SBT",
     scriptedBufferLog := false,
     scriptedBatchExecution := false,
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.10.10"
-        case _      => "2.0.0-RC4"
+        case _      => "2.0.0-RC6"
       }
     },
     buildInfoKeys := Seq[BuildInfoKey](version),
