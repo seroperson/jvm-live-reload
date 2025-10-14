@@ -1,5 +1,5 @@
 name: 🐛 Bug Report
-description: Clearly a bug in live reloading implementation
+description: Clearly a bug in the live reloading implementation
 body:
   - type: textarea
     id: what-happened

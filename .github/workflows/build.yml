@@ -1,9 +1,16 @@
 name: Build
 
 env:
+  # https://github.com/google/google-java-format?tab=readme-ov-file#as-a-library
   JDK_JAVA_OPTIONS: |
     --add-opens=java.base/java.util=ALL-UNNAMED
     --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+    --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
 
 on:
   push:
@@ -22,11 +29,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check code format
-        uses: jrouly/scalafmt-native-action@v1
-        with:
-          version: "3.9.9"
-          arguments: "-c .scalafmt.conf --test sbt core"
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -36,9 +38,11 @@ jobs:
       - name: Setup sbt launcher
         uses: sbt/setup-sbt@v1
       - uses: extractions/setup-just@v3
+      - name: Check sbt code formatting
+        run: just code-format-check-sbt
       - name: Publish Local sbt
         run: just publish-local-sbt
-      - name: Check code formatting
+      - name: Check Gradle code formatting
         run: just code-format-check-gradle
       - name: Scripted tests
         run: just test-sbt

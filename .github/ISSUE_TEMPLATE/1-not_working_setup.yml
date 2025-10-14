@@ -1,5 +1,5 @@
 name: 🙅 Report a not working setup
-description: If your project doesn't work well with live reloading
+description: If your project doesn't work well with the live reloading
 body:
   - type: textarea
     id: project-setup
