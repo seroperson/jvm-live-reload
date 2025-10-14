@@ -1,0 +1,23 @@
+name: 🚀 Feature request
+description: Request a new feature
+body:
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Describe the feature
+      description:
+        A clear and concise description of what this feature is about.
+      placeholder: |
+        Description ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context or search terms
+      description: |
+        - Any other context about the feature
+        - Search terms to help others discover this
+    validations:
+      required: false

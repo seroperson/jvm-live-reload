@@ -3,7 +3,7 @@ enablePlugins(BuildInfoPlugin)
 
 resolvers += Resolver.mavenLocal
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-http" % "3.3.3",
+  "dev.zio" %% "zio-http" % "3.5.1",
   "org.slf4j" % "slf4j-simple" % "2.0.16"
 )
 

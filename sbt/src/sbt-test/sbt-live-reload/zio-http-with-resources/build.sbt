@@ -5,10 +5,10 @@ scalaVersion := "2.13.16"
 
 resolvers += Resolver.mavenLocal
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-http" % "3.3.3",
-  "dev.zio" %% "zio-config" % "4.0.4",
-  "dev.zio" %% "zio-config-magnolia" % "4.0.4",
-  "dev.zio" %% "zio-config-typesafe" % "4.0.4",
+  "dev.zio" %% "zio-http" % "3.5.1",
+  "dev.zio" %% "zio-config" % "4.0.5",
+  "dev.zio" %% "zio-config-magnolia" % "4.0.5",
+  "dev.zio" %% "zio-config-typesafe" % "4.0.5",
   "org.slf4j" % "slf4j-simple" % "2.0.16"
 )
 

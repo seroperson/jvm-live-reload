@@ -1,0 +1,62 @@
+name: 🙅 Report a not working setup
+description: If your project doesn't work well with live reloading
+body:
+  - type: textarea
+    id: project-setup
+    attributes:
+      label: Describe your project setup
+      description: A clear and concise description of your configuration.
+      placeholder: |
+        Description, what exactly doesn't work ...
+
+        Reproduction steps, if any ...
+
+        A list of used dependencies, web framework, any additional information
+        which would help us with reproducing your setup.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      description: What OS are you using?
+      options:
+        - macOS
+        - Windows
+        - Linux
+
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Build System
+      description: What plugin are you using?
+      options:
+        - Gradle
+        - sbt
+
+  - type: input
+    id: version
+    attributes:
+      label: Version of jvm-live-reload
+      placeholder: v0.0.1
+    validations:
+      required: true
+
+  - type: input
+    id: jdk
+    attributes:
+      label: JDK Version
+      placeholder: "21"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context or search terms
+      description: |
+        - Any other context about the problem
+        - Search terms to help others discover this
+    validations:
+      required: false

@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "❓ Question"
+    url: https://github.com/seroperson/jvm-live-reload/discussions/new
+    about:
+      "This issue tracker is not for questions. Please ask a question using
+      GitHub Discussions"
