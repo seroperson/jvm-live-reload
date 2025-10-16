@@ -30,7 +30,10 @@ class LiveReloadPlugin : Plugin<Project> {
         val extension = createExtension(project)
         createRunTask(project, extension)
 
-        val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
+        project.dependencies.add("implementation",
+            "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
+        )
+        /*val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
         project.gradle.addListener(
             object : DependencyResolutionListener {
                 override fun beforeResolve(resolvableDependencies: ResolvableDependencies) {
@@ -44,7 +47,7 @@ class LiveReloadPlugin : Plugin<Project> {
 
                 override fun afterResolve(resolvableDependencies: ResolvableDependencies) {}
             },
-        )
+        )*/
     }
 
     private fun findClasspathDirectories(project: Project?): ConfigurableFileCollection? {

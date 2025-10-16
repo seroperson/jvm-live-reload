@@ -32,6 +32,29 @@ buildConfig {
     buildConfigField("VERSION", readVersion())
 }
 
+testing {
+    suites {
+        // Create a new test suite
+        val functionalTest by registering(JvmTestSuite::class) {
+            // Use Kotlin Test test framework
+            useKotlinTest("2.2.0")
+
+            dependencies {
+                // functionalTest test suite depends on the production code in tests
+                implementation(project())
+                implementation("com.squareup.okhttp3:okhttp:5.2.1")
+            }
+        }
+    }
+}
+
+gradlePlugin.testSourceSets.add(sourceSets["functionalTest"])
+
+tasks.named<Task>("check") {
+    // Include functionalTest as part of the check lifecycle
+    dependsOn(testing.suites.named("functionalTest"))
+}
+
 gradlePlugin {
     website = "https://github.com/seroperson/jvm-live-reload"
     vcsUrl = "https://github.com/seroperson/jvm-live-reload"
