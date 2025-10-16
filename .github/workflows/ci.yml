@@ -1,4 +1,4 @@
-name: Release
+name: Continuous Integration
 
 env:
   # https://github.com/google/google-java-format?tab=readme-ov-file#as-a-library
@@ -13,20 +13,53 @@ env:
     --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
 
 on:
+  pull_request:
+    branches: ["**"]
   push:
-    branches: [main]
-    tags: ["**"]
+    branches: ["**"]
+    tags: [v*]
 
 jobs:
-  publish:
+  build:
+    name: Build and Test
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "sbt"
+      - name: Setup sbt launcher
+        uses: sbt/setup-sbt@v1
+      - uses: extractions/setup-just@v3
+      - name: Check sbt code formatting
+        run: just code-format-check-sbt
+      - name: Publish Local sbt
+        run: just publish-local-sbt
+      - name: Check Gradle code formatting
+        run: just code-format-check-gradle
+      - name: Scripted tests
+        run: just test-sbt
+
+  publish:
+    name: Publish Artifacts
+    needs: [build]
+    if: |
+      github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "17"

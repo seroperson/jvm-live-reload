@@ -23,7 +23,7 @@ publish-local-sbt:
 publish-sbt:
   {{ sbt }} ci-release
 
-publish-gradle: is-release && publish-local-sbt
+publish-gradle: is-release
   cd gradle && ./gradlew :plugin:plugin:publishPlugins --validate-only \
     -Pgradle.publish.key=$GRADLE_PUBLISH_KEY \
     -Pgradle.publish.secret=$GRADLE_SECRET_KEY
@@ -32,6 +32,6 @@ code-format-check-sbt:
   # https://github.com/sbt/sbt/issues/5969
   {{ sbt }} javafmtCheckAll && {{ sbt }} scalafmtCheckAll
 
-code-format-check-gradle: calculate-version && publish-local-sbt
+code-format-check-gradle: calculate-version
   cd gradle && ./gradlew spotlessCheck
 

@@ -34,9 +34,10 @@ To get started, first, you must setup a plugin for your build system. Currently
 supported build systems are `sbt` and `gradle`. We want to cover as much as we
 can, so more build systems will likely be added later.
 
-In addition to the basic installation, you must add a `/health` endpoint to your
-web application. It must respond successfully when the application is ready to
-receive requests; usually, you can leave it without any logic.
+Besides the basic plugin installation flow, the only thing which you need to
+change in your's application code: **you must implement a `/health` endpoint**.
+It must respond successfully when the application is ready to receive requests;
+usually, you can leave it without any logic.
 
 ### sbt
 
