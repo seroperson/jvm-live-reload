@@ -1,7 +1,7 @@
 set shell := ["bash", "-c"]
 
 # Use sbtn if available, otherwise fallback to sbt
-sbt := "sbt --client"
+sbt := `which sbtn || which sbt`
 
 default: compile-sbt
 
@@ -23,6 +23,9 @@ publish-local-sbt:
 publish-sbt:
   {{ sbt }} ci-release
 
+test-gradle: calculate-version
+  cd gradle && ./gradlew :plugin:plugin:check
+
 publish-gradle: is-release
   cd gradle && ./gradlew :plugin:plugin:publishPlugins --validate-only \
     -Pgradle.publish.key=$GRADLE_PUBLISH_KEY \
@@ -32,6 +35,12 @@ code-format-check-sbt:
   # https://github.com/sbt/sbt/issues/5969
   {{ sbt }} javafmtCheckAll && {{ sbt }} scalafmtCheckAll
 
+code-format-apply-sbt:
+  {{ sbt }} javafmtAll && {{ sbt }} scalafmtAll
+
 code-format-check-gradle: calculate-version
   cd gradle && ./gradlew spotlessCheck
+
+code-format-apply-gradle: calculate-version
+  cd gradle && ./gradlew spotlessApply
 

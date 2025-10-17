@@ -23,6 +23,8 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.repository == 'seroperson/jvm-live-reload'
 
     steps:
       - name: Checkout code
@@ -32,10 +34,10 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
-          java-version: "17"
+          java-version: "21"
           distribution: "temurin"
           cache: "sbt"
-      - name: Setup sbt launcher
+      - name: Setup sbt
         uses: sbt/setup-sbt@v1
       - uses: extractions/setup-just@v3
       - name: Check sbt code formatting
@@ -44,15 +46,18 @@ jobs:
         run: just publish-local-sbt
       - name: Check Gradle code formatting
         run: just code-format-check-gradle
-      - name: Scripted tests
+      - name: sbt scripted tests
         run: just test-sbt
+      - name: gradle tests
+        run: just test-gradle
 
   publish:
     name: Publish Artifacts
     needs: [build]
     if: |
-      github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+      github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main') && github.repository == 'seroperson/jvm-live-reload'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -62,9 +67,9 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: "temurin"
-          java-version: "17"
+          java-version: "21"
           cache: sbt
-      - name: Setup sbt launcher
+      - name: Setup sbt
         uses: sbt/setup-sbt@v1
       - uses: extractions/setup-just@v3
       - name: Publish sbt

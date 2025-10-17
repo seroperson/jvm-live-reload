@@ -38,13 +38,13 @@ public final class DevServerRunner {
     // Set Java system properties
     // settings.getMergedProperties().forEach(System::setProperty);
 
-    /**
-     * @formatter:off rootClassLoader - system classes └── buildLoader - sbt classes └──
-     *     sharedClassesLoader - delegates specific shared classes to buildLoader, everything else
-     *     to rootClassLoader └── dependenciesClassLoader - all jars └──
-     *     currentApplicationClassLoader - user code, recreated on reload
-     * @formatter:on
-     */
+    /*
+      rootClassLoader - system classes
+      └── buildLoader - sbt classes
+      └── sharedClassesLoader - delegates specific shared classes to buildLoader, everything else to rootClassLoader
+          └── dependenciesClassLoader - all jars
+          └── currentApplicationClassLoader - user code, recreated on reload
+    */
     var buildLoader = this.getClass().getClassLoader();
     var rootClassLoader = java.lang.ClassLoader.getSystemClassLoader().getParent();
 

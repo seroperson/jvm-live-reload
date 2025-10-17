@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 
 @Timeout(value = 2, unit = TimeUnit.MINUTES)
-class LiveReloadHttp4kTest : LiveReloadTestBase() {
+class LiveReloadJavalinTest : LiveReloadTestBase() {
     @field:TempDir lateinit var projectDir: File
 
     private val appCode by lazy {
@@ -21,7 +21,7 @@ class LiveReloadHttp4kTest : LiveReloadTestBase() {
     private val settingsFile by lazy { projectDir.resolve("settings.gradle.kts") }
 
     @Test
-    fun `reload http4k`() {
+    fun `reload javalin`() {
         settingsFile.writeText(SETTINGS_CONTENT)
         buildFile.writeText(BUILD_CONTENT)
         appCode.writeText(APP_CODE_1)
@@ -70,8 +70,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("org.http4k:http4k-bom:6.18.1.0"))
-    implementation("org.http4k:http4k-core")
+    implementation("io.javalin:javalin:6.7.0")
 }
 
 liveReload { settings = mapOf("live.reload.http.port" to "8081") }
@@ -80,39 +79,41 @@ application { mainClass = "AppKt" }
 """
         const val APP_CODE_1 =
             """
-import org.http4k.core.*
-import org.http4k.core.Status.Companion.OK
-import org.http4k.routing.*
-import org.http4k.server.*
+import io.javalin.Javalin
 
 fun main() {
-    val endpoints =
-        listOf(
-            "/greet" bind Method.GET to { Response(OK).body("Hello World") },
-            "/health" bind Method.GET to { Response(OK) },
-        )
-    routes(endpoints).asServer(SunHttp(8081)).use {
-        it.start()
-        it.block()
+    val server = Javalin.create()
+        .get("/greet") {
+            it.result("Hello World")
+        }
+        .get("/health") {
+            it.status(200)
+        }
+    try {
+        server.start(8081)
+        Thread.currentThread().join()
+    } catch (ex: InterruptedException) {
+        server.stop()
     }
 }
 """
         const val APP_CODE_2 =
             """
-import org.http4k.core.*
-import org.http4k.core.Status.Companion.OK
-import org.http4k.routing.*
-import org.http4k.server.*
+import io.javalin.Javalin
 
 fun main() {
-    val endpoints =
-        listOf(
-            "/greet_reloaded" bind Method.GET to { Response(OK).body("World Hello") },
-            "/health" bind Method.GET to { Response(OK) },
-        )
-    routes(endpoints).asServer(SunHttp(8081)).use {
-        it.start()
-        it.block()
+    val server = Javalin.create()
+        .get("/greet_reloaded") {
+            it.result("World Hello")
+        }
+        .get("/health") {
+            it.status(200)
+        }
+    try {
+        server.start(8081)
+        Thread.currentThread().join()
+    } catch (ex: InterruptedException) {
+        server.stop()
     }
 }
 """

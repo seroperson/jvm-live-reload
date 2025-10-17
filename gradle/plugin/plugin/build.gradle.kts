@@ -35,20 +35,31 @@ buildConfig {
 testing {
     suites {
         // Create a new test suite
-        val functionalTest by registering(JvmTestSuite::class) {
-            // Use Kotlin Test test framework
-            useKotlinTest("2.2.0")
+        val functionalTest by
+            registering(JvmTestSuite::class) {
+                // Use Kotlin Test test framework
+                useKotlinTest("2.2.0")
 
-            dependencies {
-                // functionalTest test suite depends on the production code in tests
-                implementation(project())
-                implementation("com.squareup.okhttp3:okhttp:5.2.1")
+                dependencies {
+                    // functionalTest test suite depends on the production code in tests
+                    implementation(project())
+                    implementation("com.squareup.okhttp3:okhttp:5.2.1")
+                }
             }
-        }
     }
 }
 
 gradlePlugin.testSourceSets.add(sourceSets["functionalTest"])
+
+tasks.withType<Test> {
+    maxParallelForks = 1
+    forkEvery = 1
+}
+
+// https://github.com/gradle/gradle/issues/5431
+tasks.withType<Test> {
+    addTestOutputListener { descriptor, event -> println("$descriptor: ${event.message}") }
+}
 
 tasks.named<Task>("check") {
     // Include functionalTest as part of the check lifecycle

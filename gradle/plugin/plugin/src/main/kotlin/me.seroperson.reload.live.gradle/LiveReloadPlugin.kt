@@ -5,8 +5,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.DependencyResolutionListener
-import org.gradle.api.artifacts.ResolvableDependencies
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.ConfigurableFileCollection
@@ -30,24 +28,25 @@ class LiveReloadPlugin : Plugin<Project> {
         val extension = createExtension(project)
         createRunTask(project, extension)
 
-        project.dependencies.add("implementation",
+        project.dependencies.add(
+            "implementation",
             "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
         )
-        /*val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
-        project.gradle.addListener(
-            object : DependencyResolutionListener {
-                override fun beforeResolve(resolvableDependencies: ResolvableDependencies) {
-                    runtimeDeps.add(
-                        project.dependencies.create(
-                            "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
-                        ),
-                    )
-                    project.gradle.removeListener(this)
-                }
+    /*val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
+    project.gradle.addListener(
+        object : DependencyResolutionListener {
+            override fun beforeResolve(resolvableDependencies: ResolvableDependencies) {
+                runtimeDeps.add(
+                    project.dependencies.create(
+                        "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
+                    ),
+                )
+                project.gradle.removeListener(this)
+            }
 
-                override fun afterResolve(resolvableDependencies: ResolvableDependencies) {}
-            },
-        )*/
+            override fun afterResolve(resolvableDependencies: ResolvableDependencies) {}
+        },
+    )*/
     }
 
     private fun findClasspathDirectories(project: Project?): ConfigurableFileCollection? {
