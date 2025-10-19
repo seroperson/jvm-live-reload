@@ -32,21 +32,6 @@ class LiveReloadPlugin : Plugin<Project> {
             "implementation",
             "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
         )
-    /*val runtimeDeps = project.configurations.getByName("runtimeOnly").dependencies
-    project.gradle.addListener(
-        object : DependencyResolutionListener {
-            override fun beforeResolve(resolvableDependencies: ResolvableDependencies) {
-                runtimeDeps.add(
-                    project.dependencies.create(
-                        "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}",
-                    ),
-                )
-                project.gradle.removeListener(this)
-            }
-
-            override fun afterResolve(resolvableDependencies: ResolvableDependencies) {}
-        },
-    )*/
     }
 
     private fun findClasspathDirectories(project: Project?): ConfigurableFileCollection? {

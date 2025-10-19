@@ -19,6 +19,7 @@ the approach used in such frameworks as **Spring**, **Play**, **Quarkus**, and
 others.
 
 - [Installation](#installation)
+  - [Changes to the application code](#changes-to-the-application-code)
   - [sbt](#sbt)
   - [Gradle](#gradle)
 - [Configuration](#configuration)
@@ -30,14 +31,48 @@ others.
 
 ## Installation
 
-To get started, first, you must setup a plugin for your build system. Currently
+To get started, first, you'll probably need to do some changes to the
+application's code and also setup a plugin for your build system. Currently
 supported build systems are `sbt` and `gradle`. We want to cover as much as we
 can, so more build systems will likely be added later.
 
-Besides the basic plugin installation flow, the only thing which you need to
-change in your's application code: **you must implement a `/health` endpoint**.
-It must respond successfully when the application is ready to receive requests;
-usually, you can leave it without any logic.
+<!-- prettier-ignore-start -->
+> [!IMPORTANT]
+> After making all the necessary changes, be sure to read the 
+> [Configuration](#configuration) section to tweak default settings according 
+> to your setup. By default live-reloading proxy will start at `:9000` port 
+> and your application is expected to listen at `:8080`.
+<!-- prettier-ignore-end -->
+
+### Changes to the application code
+
+Besides the basic plugin installation flow, there are things you'll probably
+(_check the [list of supported frameworks](#list-of-tested-frameworks) to find
+exact changes which you must implement according to your framework_) need to
+change in your application to make it live-reloading-ready:
+
+- Implement a `/health` endpoint. It must respond successfully when the
+  application is ready to receive requests; usually, you can leave it without
+  any logic.
+- The `main` method must be blocking until application's shutdown.
+- The `main` method must handle `InterruptedException` by gracefully shutting
+  down the webserver and release all initialized resources.
+- The `main` method must only finish when your application is completely
+  stopped.
+
+Following these recommendations will also make your application more responsive
+in general, so they are also nice to have besides making an application
+live-reloading-ready. Read an article **[⏹️ About making your JVM application
+interruptible][13]** to know more about interrupting.
+
+Worth to say, that if your framework doesn't support interrupting and/or doesn't
+allow you to make these changes by yourself right in your codebase, probably it
+should be supported by the plugin, like frameworks from Scala ecosystem, such as
+`zio` or `cats-effect` (or a framework itself must be fixed, which is
+preferable). Once again, you can take a look at the
+[list of tested frameworks](#list-of-tested-frameworks), although, of course,
+even if your framework isn't in the list, live-reloading may still work if
+framework implements interrupting and graceful shutdown correctly.
 
 ### sbt
 
@@ -53,8 +88,7 @@ And enable the plugin on your web application:
 enablePlugins(LiveReloadPlugin)
 ```
 
-Then you can run `sbt run` and `curl -X GET http://localhost:9000/` to try this
-out.
+The command to run your application in live-reloading mode is `sbt run`.
 
 ### Gradle
 
@@ -64,8 +98,8 @@ Add a plugin to your `build.gradle.kts` using:
 id("me.seroperson.reload.live.gradle") version "0.0.1"
 ```
 
-Then you can run `./gradlew liveReloadRun` and
-`curl -X GET http://localhost:9000/` to try this out.
+The command to run your application in live-reloading mode is
+`./gradlew liveReloadRun`.
 
 ## Configuration
 
@@ -102,36 +136,58 @@ liveReload { settings = mapOf("live.reload.http.port" to "8081") }
 ## List of tested frameworks
 
 To minimize any unsuccessful experience, we'll maintain the list of officially
-tested frameworks and libraries right here:
+tested frameworks and libraries right here.
+
+However, even if a framework isn't listed here, it still may play well. If you
+have successfully used this plugin, I would appreciate if you could share your
+project setup [in the relevant discussion][12], even if your setup fully
+consists of libraries listed above. This would help other users to determine
+whether their own setup will work.
 
 <table>
   <tr>
     <th>Framework</th>
     <th>Version</th>
     <th>Confirmation</th>
+    <th>Necessary changes to the application code</th>
   </tr>
   <tr>
     <td><a href="https://github.com/zio/zio">zio</a> + <a href="https://github.com/zio/zio-http">zio-http</a> + <a href="https://github.com/zio/zio-config">zio-config-typesafe</a></td>
     <td><i>zio</i> <b>2.1.21</b>, <i>zio-http</i> <b>3.5.1</b>, <i>zio-config</i> <b>4.0.5</b></td>
     <td>See <code>zio-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
   </tr>
   <tr>
     <td><a href="https://github.com/http4s/http4s">http4s-ember-server</a> + <a href="https://github.com/typelevel/cats-effect">cats-effect</a> + <a href="https://github.com/pureconfig/pureconfig">pureconfig</a></td>
     <td><i>http4s-ember-server</i> <b>0.23.30</b>, <i>cats-effect</i> <b>3.6.1</b>, <i>pureconfig</i> <b>0.17.9</b></td>
     <td>See <code>http4s-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
   </tr>
   <tr>
     <td><a href="https://github.com/com-lihaoyi/cask">cask</a></td>
     <td><i>cask</i> <b>0.9.7</b></td>
     <td>See <code>cask</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/ktorio/ktor">ktor</a></td>
+    <td><i>ktor</i> <b>3.3.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadKtorTest.kt">LiveReloadKtorTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/http4k/http4k">http4k</a></td>
+    <td><i>http4k</i> <b>6.18.1.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadHttp4kTest.kt">LiveReloadHttp4kTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/javalin/javalin">javalin</a></td>
+    <td><i>javalin</i> <b>6.7.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadJavalinTest.kt">LiveReloadHttp4kTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
   </tr>
 </table>
-
-However, it may play well even if it isn't listed here. If you have successfully
-used this plugin, I would appreciate if you could share your project setup [in
-the relevant discussion][12], even if your setup fully consists of libraries
-listed above. This would help other users to determine whether their own setup
-will work.
 
 ## How it works
 
@@ -166,29 +222,17 @@ Basically, this project works like this:
 
 An intermediate proxy is required to make this solution universal.
 
-However, to remain framework-agnostic, this plugin still expects some specific
-behavior from each framework and from your application. To simplify things,
-let's refer to your "application + framework" simply as "application". So, to be
-live-reload ready, your application must:
-
-- Expose a `main` method (this is a JVM requirement, so all applications
-  qualify), which starts a webserver and blocks until its shutdown.
-- The `main` method must handle `InterruptedException` by gracefully shutting
-  down the webserver and everything else you need.
-- The `main` method finishes only when your application is completely stopped.
-
-This sounds like basic practice that should be followed by default, but in
-reality, it is rare for everything to work this way.
-
 ### Hooks
 
-This is why this plugin introduces so-called "hooks". Hooks define how to start
-and shut down your application. When reloading occurs, the proxy will call all
-defined shutdown hooks to stop it, and then it will call all startup hooks to
-start it again. Both types of hooks are blocking. When shutdown hooks are
-finished, the application is considered stopped and all its resources are
-cleaned. Similarly, when startup hooks are finished, the application is
-considered ready to receive requests.
+So far not every framework implements interrupting and graceful shutdown
+correctly, which is necessary to be live-reloading-ready. That's why this plugin
+introduces so-called "hooks". Hooks define how to start and shutdown your
+application. When reloading occurs, the proxy will call all defined shutdown
+hooks to stop it, and then it will call all startup hooks to start it again.
+Both types of hooks are blocking. When shutdown hooks are finished, the
+application is considered stopped and all its resources are cleaned. Similarly,
+when startup hooks are finished, the application is considered ready to receive
+requests.
 
 For example, there is the built-in `RestApiHealthCheckStartupHook`, which polls
 the `/health` endpoint until a successful response. This means that your
@@ -315,4 +359,5 @@ SOFTWARE.
 [10]: https://www.playframework.com
 [11]: https://quarkus.io
 [12]: https://github.com/seroperson/jvm-live-reload/discussions/1
+[13]: https://seroperson.me/2025/10/20/interrupting-jvm-application/
 <!-- prettier-ignore-end -->
