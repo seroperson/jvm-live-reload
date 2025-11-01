@@ -1,4 +1,4 @@
-package me.seroperson.reload.live.sbt
+package me.seroperson.reload.live.mill
 
 import java.io.Closeable
 import java.io.FileDescriptor
@@ -6,9 +6,12 @@ import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.io.OutputStream
-import jline.console.ConsoleReader
-import scala.annotation.tailrec
+import org.jline.reader.*
+import org.jline.reader.impl.*
+import org.jline.terminal.*
+import org.jline.terminal.impl.*
 import scala.concurrent.duration.*
+import scala.util.Using
 
 /** Defines how user interaction is handled during development server execution.
   *
@@ -17,7 +20,7 @@ import scala.concurrent.duration.*
   * provide console-based interaction, GUI-based interaction, or non-blocking
   * background execution.
   */
-private[sbt] trait InteractionMode {
+trait InteractionMode {
 
   /** Blocks execution until the user indicates the application should stop.
     *
@@ -25,18 +28,7 @@ private[sbt] trait InteractionMode {
     * has indicated, via some interface (console or GUI), that the application
     * should no longer be running.
     */
-  def waitForCancel(): Unit
-
-  /** Executes code with console echo disabled.
-    *
-    * Enables and disables console echo (or does nothing if no console). This
-    * ensures console echo is enabled on exception thrown in the given code
-    * block, providing a clean user experience during interaction.
-    *
-    * @param f
-    *   the code block to execute without echo
-    */
-  def doWithoutEcho(f: => Unit): Unit
+  def waitForCancel(in: InputStream, out: OutputStream): Unit
 
 }
 
@@ -45,9 +37,8 @@ private[sbt] trait InteractionMode {
   * This is provided, rather than adding a new flag to InteractionMode, to
   * preserve binary compatibility.
   */
-private[sbt] trait NonBlockingInteractionMode extends InteractionMode {
-  override def waitForCancel(): Unit = ()
-  override def doWithoutEcho(f: => Unit): Unit = f
+trait NonBlockingInteractionMode extends InteractionMode {
+  override def waitForCancel(in: InputStream, out: OutputStream): Unit = ()
 
   /** Start the server, if not already started
     *
@@ -66,59 +57,31 @@ private[sbt] trait NonBlockingInteractionMode extends InteractionMode {
 
 /** Default behavior for interaction mode is to wait on JLine.
   */
-private[sbt] object ConsoleInteractionMode extends InteractionMode {
+object ConsoleInteractionMode extends InteractionMode {
 
-  private final class SystemInWrapper() extends InputStream {
-    override def read(): Int = System.in.read()
-  }
+  override def waitForCancel(in: InputStream, out: OutputStream): Unit = {
+    val terminal = TerminalBuilder
+      .builder()
+      .streams(in, out)
+      .build()
 
-  private final class SystemOutWrapper extends OutputStream {
-    override def write(b: Int): Unit = System.out.write(b)
-    override def write(b: Array[Byte]): Unit = write(b, 0, b.length)
-    override def write(b: Array[Byte], off: Int, len: Int): Unit = {
-      System.out.write(b, off, len)
-      System.out.flush()
-    }
-    override def flush(): Unit = System.out.flush()
-  }
+    Using(terminal) { t =>
+      t.echo(false)
 
-  private def createReader: ConsoleReader =
-    // sbt 1.4+ (class name is "sbt.internal.util.Terminal$proxyInputStream$"):
-    // sbt makes System.in non-blocking starting with 1.4.0, therefore we shouldn't
-    // create a non-blocking input stream reader ourselves, but just wrap System.in
-    // and System.out (otherwise we end up in a deadlock, console will hang, not accepting inputs)
-    new ConsoleReader(new SystemInWrapper(), new SystemOutWrapper())
+      val reader = t.reader()
 
-  private def withConsoleReader[T](f: ConsoleReader => T): T = {
-    val consoleReader = createReader
-    try f(consoleReader)
-    finally consoleReader.close()
-  }
-
-  private def waitForKey(): Unit = {
-    withConsoleReader { consoleReader =>
-      @tailrec def waitEOF(): Unit = {
-        consoleReader.readCharacter() match {
+      def waitEOF(): Unit = {
+        reader.read() match {
           case 4 | 13 => // STOP on Ctrl-D or Enter
-          case 11     => consoleReader.clearScreen(); waitEOF()
+          case 11     => /*reader.clearScreen();*/ waitEOF()
           case 10     => println(); waitEOF()
           case _      => waitEOF()
         }
       }
-      doWithoutEcho(waitEOF())
+
+      waitEOF()
     }
   }
-
-  override def doWithoutEcho(f: => Unit): Unit = {
-    withConsoleReader { consoleReader =>
-      val terminal = consoleReader.getTerminal
-      terminal.setEchoEnabled(false)
-      try f
-      finally terminal.restore()
-    }
-  }
-
-  override def waitForCancel(): Unit = waitForKey()
 
   override def toString = "Console Interaction Mode"
 }
@@ -126,8 +89,7 @@ private[sbt] object ConsoleInteractionMode extends InteractionMode {
 /** Simple implementation of the non-blocking interaction mode that simply
   * stores the current application in a static variable.
   */
-private[sbt] object StaticNonBlockingInteractionMode
-    extends NonBlockingInteractionMode {
+object StaticNonBlockingInteractionMode extends NonBlockingInteractionMode {
   private var current: Option[Closeable] = None
 
   /** Start the server, if not already started

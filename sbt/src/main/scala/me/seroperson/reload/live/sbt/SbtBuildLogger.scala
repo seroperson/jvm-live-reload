@@ -19,7 +19,7 @@ import sbt.util.Logger
   * @param logger
   *   the underlying SBT logger instance
   */
-class SbtBuildLogger(
+private[sbt] class SbtBuildLogger(
     private val settings: DevServerSettings,
     private val logger: Logger
 ) extends BuildLogger {
@@ -32,16 +32,10 @@ class SbtBuildLogger(
   }
 
   override def info(message: String): Unit = {
-    if (settings.isDebug) {
-      println(message)
-    }
     logger.info(message)
   }
 
   override def warn(message: String): Unit = {
-    if (settings.isDebug) {
-      println(message)
-    }
     logger.warn(message)
   }
 
@@ -60,9 +54,6 @@ class SbtBuildLogger(
   }
 
   override def error(message: String): Unit = {
-    if (settings.isDebug) {
-      println(message)
-    }
     logger.error(message)
   }
 

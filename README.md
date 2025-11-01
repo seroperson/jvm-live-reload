@@ -54,16 +54,15 @@ change in your application to make it live-reloading-ready:
 - Implement a `/health` endpoint. It must respond successfully when the
   application is ready to receive requests; usually, you can leave it without
   any logic.
-- The `main` method must be blocking until application's shutdown.
 - The `main` method must handle `InterruptedException` by gracefully shutting
   down the webserver and release all initialized resources.
 - The `main` method must only finish when your application is completely
   stopped.
 
-Following these recommendations will also make your application more responsive
-in general, so they are also nice to have besides making an application
-live-reloading-ready. Read an article **[⏹️ About making your JVM application
-interruptible][13]** to know more about interrupting.
+Implementing this logic will also make your application lifecycle more
+predictable in general, so they are just nice to have besides making an
+application live-reloading-ready. Read an article **[⏹️ About making your JVM
+application interruptible][13]** to know more about interrupting.
 
 Worth to say, that if your framework doesn't support interrupting and/or doesn't
 allow you to make these changes by yourself right in your codebase, probably it
@@ -71,8 +70,8 @@ should be supported by the plugin, like frameworks from Scala ecosystem, such as
 `zio` or `cats-effect` (or a framework itself must be fixed, which is
 preferable). Once again, you can take a look at the
 [list of tested frameworks](#list-of-tested-frameworks), although, of course,
-even if your framework isn't in the list, live-reloading may still work if
-framework implements interrupting and graceful shutdown correctly.
+even if your framework isn't in the list, live-reloading may still work if it
+implements interrupting and graceful shutdown correctly.
 
 ### sbt
 
@@ -141,7 +140,7 @@ tested frameworks and libraries right here.
 However, even if a framework isn't listed here, it still may play well. If you
 have successfully used this plugin, I would appreciate if you could share your
 project setup [in the relevant discussion][12], even if your setup fully
-consists of libraries listed above. This would help other users to determine
+consists of libraries listed below. This would help other users to determine
 whether their own setup will work.
 
 <table>
@@ -238,7 +237,7 @@ For example, there is the built-in `RestApiHealthCheckStartupHook`, which polls
 the `/health` endpoint until a successful response. This means that your
 application will be considered started when its `/health` endpoint returns
 `200`. Similarly, there is a `RestApiHealthCheckShutdownHook`, which polls the
-endpoint until failure.
+endpoint until a failure.
 
 The complete list of built-in hooks:
 

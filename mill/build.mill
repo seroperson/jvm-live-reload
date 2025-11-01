@@ -1,0 +1,74 @@
+//| mill-version: 1.1.0-RC1
+//| mill-jvm-version: system
+//| mvnDeps: ["com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION"]
+
+package build
+
+import mill.*, scalalib.*, publish.*
+import mill.util.BuildInfo.{millVersion, millBinPlatform}
+import mill.contrib.buildinfo.BuildInfo
+import mill.scalalib.scalafmt.ScalafmtModule
+import mill.api.Task.Simple
+import mill.api.BuildCtx
+
+object `mill-live-reload` extends ScalaModule, PublishModule, BuildInfo, ScalafmtModule:
+
+  def scalaVersion = "3.7.3"
+  def platformSuffix = s"_mill$millBinPlatform"
+  def mvnDeps = Seq(
+    mvn"com.lihaoyi::mill-libs:$millVersion",
+    mvn"me.seroperson:jvm-live-reload-runner:${readVersionFromRepo()}",
+    mvn"me.seroperson:jvm-live-reload-webserver:${readVersionFromRepo()}",
+    mvn"org.jline:jline:3.30.6"
+  )
+
+  def scalafmtConfig: T[Seq[PathRef]] = Task.Sources(
+    BuildCtx.workspaceRoot / ".." / ".scalafmt.conf"
+  )
+
+  object integration extends ScalaTests, TestModule.ScalaTest, BuildInfo {
+    override def scalaTestVersion = "3.2.19"
+    override def mvnDeps = Seq(
+      mvn"com.lihaoyi::mill-testkit:$millVersion",
+      mvn"com.squareup.okhttp3:okhttp-jvm:5.2.1"
+    )
+
+    override def resources: T[Seq[PathRef]] = Task {
+      super[ScalaTests].resources() ++ Seq(buildInfoResources())
+    }
+
+    def buildInfoPackageName = "me.seroperson.reload.live.mill.test"
+
+    def buildInfoMembers = Seq(
+      BuildInfo.Value("resourceDir", super[ScalaTests].resources().iterator.map(_.path).mkString(";")),
+      BuildInfo.Value("exePath", millExecutable.assembly().path.toString)
+    )
+
+    // Create a Mill executable configured for testing our plugin
+    object millExecutable extends JavaModule {
+      def mvnDeps = Seq(mvn"com.lihaoyi:mill-runner-launcher_3:$millVersion")
+      def mainClass = Some("mill.launcher.MillLauncherMain")
+    }
+  }
+
+  def readVersionFromRepo = Task.Input {
+    os.read(BuildCtx.workspaceRoot / ".." / "version.txt")
+  }
+
+  def buildInfoPackageName = "me.seroperson.reload.live.mill"
+
+  def buildInfoMembers = Seq(
+    BuildInfo.Value("version", readVersionFromRepo()),
+  )
+
+  // Publishing Config
+  override def publishVersion = "0.0.1"// readVersionFromRepo
+  override def pomSettings = PomSettings(
+    description = "Provides an universal Live Reload experience for web applications built with mill",
+    organization = "me.seroperson",
+    url = "https://github.com/seroperson/jvm-live-reload",
+    licenses = Seq(License.MIT),
+    versionControl = VersionControl.github("seroperson", "jvm-live-reload"),
+    developers = Seq(Developer("seroperson", "Daniil Sivak", "https://seroperson.me/"))
+  )
+

@@ -23,7 +23,7 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     if: github.repository == 'seroperson/jvm-live-reload'
 
     steps:
@@ -37,19 +37,24 @@ jobs:
           java-version: "21"
           distribution: "temurin"
           cache: "sbt"
-      - name: Setup sbt
-        uses: sbt/setup-sbt@v1
+
       - uses: extractions/setup-just@v3
-      - name: Check sbt code formatting
-        run: just code-format-check-sbt
+      - uses: sbt/setup-sbt@v1
+      - uses: zhutmost/setup-mill@main
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Check code formatting
+        run: just code-format-check-all
+
       - name: Publish Local sbt
-        run: just publish-local-sbt
-      - name: Check Gradle code formatting
-        run: just code-format-check-gradle
-      - name: sbt scripted tests
+        run: just publish-local-if-unpublished-sbt
+
+      - name: sbt tests
         run: just test-sbt
       - name: gradle tests
         run: just test-gradle
+      - name: mill tests
+        run: just test-mill
 
   publish:
     name: Publish Artifacts

@@ -1,10 +1,8 @@
 package me.seroperson.reload.live.runner.classloader;
 
-import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
-import java.util.Enumeration;
 
 /**
  * A URLClassLoader with a descriptive toString() method for debugging.
@@ -27,22 +25,6 @@ public class NamedURLClassLoader extends URLClassLoader {
   public NamedURLClassLoader(String name, URL[] urls, ClassLoader parent) {
     super(urls, parent);
     this.name = name;
-  }
-
-  @Override
-  public URL findResource(String name) {
-    // if (System.out != null) {
-    // System.out.println(this.name + ": trying to get resource via findResource: " + name);
-    // }
-    return super.findResource(name);
-  }
-
-  @Override
-  public Enumeration<URL> getResources(String name) throws IOException {
-    // if (System.out != null) {
-    // System.out.println(this.name + ": trying to get resource via getResources: " + name);
-    // }
-    return super.getResources(name);
   }
 
   /**

@@ -43,7 +43,7 @@ public class DevServerSettings {
       new DevParameter<>(
           LiveReloadProxyHttpHost,
           "LIVE_RELOAD_PROXY_HTTP_HOST",
-          "0.0.0.0",
+          "localhost",
           String::valueOf,
           Function.identity());
 

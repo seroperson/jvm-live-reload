@@ -8,7 +8,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 
-@Timeout(value = 2, unit = TimeUnit.MINUTES)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 class LiveReloadKtorTest : LiveReloadTestBase() {
     @field:TempDir lateinit var projectDir: File
 
@@ -27,7 +27,6 @@ class LiveReloadKtorTest : LiveReloadTestBase() {
         appCode.writeText(APP_CODE_1)
 
         val runner = GradleRunner.create()
-        runner.forwardOutput()
         runner.withPluginClasspath()
         runner.withProjectDir(projectDir)
         runner.withArguments(":liveReloadRun")
@@ -38,7 +37,7 @@ class LiveReloadKtorTest : LiveReloadTestBase() {
                 } catch (_: InterruptedException) {
                     println("Interrupted")
                 } catch (ex: Exception) {
-                    ex.printStackTrace()
+                    println("Got exception ${ex.message}")
                 }
             }
         runThread.start()

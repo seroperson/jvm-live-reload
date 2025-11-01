@@ -20,7 +20,7 @@ import xsbti.FileConverter
   * enable live reload during development. It manages compilation, class
   * loading, file monitoring, and server lifecycle operations.
   */
-object Commands {
+private[sbt] object Commands {
 
   val liveReloadTask = Def.task {
     liveCompileEverything.value.reduceLeft(_ ++ _)
@@ -118,8 +118,6 @@ object Commands {
       case nonBlocking: NonBlockingInteractionMode =>
         nonBlocking.start(devModeServer)
       case _ =>
-        devModeServer
-
         import scala.Console.{GREEN, UNDERLINED, RESET, YELLOW}
 
         sbtLog.info(
@@ -137,11 +135,8 @@ object Commands {
         sbtLog.info(s"   Use ${UNDERLINED}Enter${RESET} to stop and exit")
 
         try {
-          logger.debug("Before waitForCancel")
           interaction.waitForCancel()
-          logger.debug("After waitForCancel")
         } finally {
-          logger.debug("Running devModeServer.close()")
           devModeServer.close()
         }
         true
