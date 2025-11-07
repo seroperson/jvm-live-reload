@@ -166,7 +166,7 @@ public class DevServerStart implements ReloadableServer {
 
   private synchronized void stopInternal() {
     if (appThread != null) {
-      logger.info("Stopping " + mainClass);
+      logger.debug("Stopping " + mainClass);
 
       runHooks(appThread, classLoader, shutdownHooks);
 
@@ -207,12 +207,13 @@ public class DevServerStart implements ReloadableServer {
   @Override
   public boolean reload() {
     var reloadResult = buildLink.reload();
-    logger.info("Got reloadResult: " + reloadResult);
     if (reloadResult instanceof ReloadGeneration) {
+      var casted = (ReloadGeneration) reloadResult;
+      logger.debug("Got reload result, iteration (" + casted.getIteration() + ")");
       // New application classes
       logger.info("🔃 Reloading an application");
       stopInternal();
-      startInternal((ReloadGeneration) reloadResult);
+      startInternal(casted);
       logger.debug("Finished reloading");
       return true;
     } else if (reloadResult == null) {

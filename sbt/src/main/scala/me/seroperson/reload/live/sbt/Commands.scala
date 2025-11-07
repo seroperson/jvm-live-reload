@@ -97,7 +97,7 @@ private[sbt] object Commands {
     );
 
     val logger = new SbtBuildLogger(settings, sbtLog)
-    lazy val devModeServer = DevServerRunner.getInstance.run(
+    val devModeServer = DevServerRunner.getInstance.run(
       /* settings */ settings,
       /* dependencyClasspath */ SbtCompat
         .getFiles(liveDependencyClasspath.value)

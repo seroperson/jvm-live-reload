@@ -4,7 +4,7 @@ import me.seroperson.reload.live.build.BuildLogger
 import me.seroperson.reload.live.settings.DevServerSettings
 import mill.api.daemon.Logger
 
-class MillBuildLogger(
+private[mill] class MillBuildLogger(
     private val settings: DevServerSettings,
     private val logger: Logger
 ) extends BuildLogger {

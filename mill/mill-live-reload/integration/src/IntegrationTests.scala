@@ -9,7 +9,7 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class IntegrationTests extends AnyFunSuite {
 
-  lazy val client = OkHttpClient()
+  private lazy val client = OkHttpClient()
 
   private def runUntil(
     url: String,
@@ -55,11 +55,7 @@ class IntegrationTests extends AnyFunSuite {
     runThread.start()
 
     val greet = runUntil("http://localhost:9000/greet", 200, "Hello World")
-
-    val changedContent = os.read(resourceDir / "changes" / "app" / "src" / "App.scala.1")
-
-    tester.modifyFile(tester.workspacePath / "app" / "src" / "App.scala", _ => changedContent)
-
+    tester.modifyFile(tester.workspacePath / "app" / "src" / "App.scala", _ => os.read(resourceDir / "changes" / "app" / "src" / "App.scala.1"))
     val greetReloaded = runUntil("http://localhost:9000/greet_reloaded", 200, "World Hello")
 
     runThread.interrupt()

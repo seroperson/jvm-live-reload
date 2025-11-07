@@ -9,15 +9,9 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.dsl.io._
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._
-import org.typelevel.log4cats._
+import fs2.io.net.Network
 
 object App extends IOApp.Simple {
-
-  // assumes dependency on log4cats-slf4j module
-  import org.typelevel.log4cats.slf4j.Slf4jFactory
-
-  // create our LoggerFactory
-  implicit val logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
 
   def helloWorldRoutes[F[_]: Sync]: HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
@@ -30,15 +24,13 @@ object App extends IOApp.Simple {
     }
   }
 
-  def runServer[F[_]: Async: LoggerFactory]: F[Nothing] = {
-    val httpApp = helloWorldRoutes[F].orNotFound
+  def runServer[F[_]: Async: Network]: F[Nothing] = {
     for {
       _ <-
         EmberServerBuilder
           .default[F]
-          .withHost(ipv4"0.0.0.0")
           .withPort(Port.fromInt(me.seroperson.BuildInfo.port).get)
-          .withHttpApp(httpApp)
+          .withHttpApp(helloWorldRoutes[F].orNotFound)
           .build
     } yield ()
   }.useForever

@@ -7,9 +7,7 @@ scalaVersion := "2.13.16"
 resolvers += Resolver.mavenLocal
 libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-ember-server" % Http4sVersion,
-  "org.http4s" %% "http4s-dsl" % Http4sVersion,
-  "org.typelevel" %% "log4cats-slf4j" % "2.7.1",
-  "org.slf4j" % "slf4j-simple" % "2.0.16"
+  "org.http4s" %% "http4s-dsl" % Http4sVersion
 )
 
 val isSbt2 = settingKey[Boolean]("isSbt2")

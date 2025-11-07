@@ -23,7 +23,7 @@ import play.dev.filewatch.LoggerProxy
 import scala.jdk.CollectionConverters.*
 import scalalib.*
 
-trait LiveReloadModule extends JavaModule:
+trait LiveReloadModule extends JavaModule {
 
   override def mvnDeps =
     super.mvnDeps() ++ Seq(
@@ -132,5 +132,7 @@ trait LiveReloadModule extends JavaModule:
       taskLog.streams.out
     )
   }
+
+}
 
 object LiveReloadModule

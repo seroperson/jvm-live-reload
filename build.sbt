@@ -15,6 +15,8 @@ scalacOptions ++= Seq(
     case Some((2, _)) => Seq("-Xsource:3")
     case _            => Seq.empty
   })
+// There are some "unused" settings from sbt-git, disabling this check to not pollute logs
+Global / lintUnusedKeysOnLoad := false
 
 // Publishing settings
 organization := "me.seroperson"
@@ -36,14 +38,16 @@ developers := List(
   )
 )
 
-// `mill` and `gradle` read current version from this file
-lazy val catVersion =
-  taskKey[Unit]("Outputs current version to `version.txt` file.")
-catVersion := {
-  val versionFile = file("version.txt")
-  streams.value.log.info(s"Writing version to ${versionFile.getAbsolutePath}")
-  IO.write(versionFile, s"${version.value}")
-}
+commands ++= Seq(Commands.quickPublish, Commands.catVersion)
+
+addCommandAlias(
+  "quickLocalPublish",
+  "quickPublish;publishM2;publishLocal;catVersion"
+)
+addCommandAlias("quickScripted", "quickPublish;scripted")
+
+addCommandAlias("fmtCheckAll", "javafmtCheckAll;scalafmtCheckAll")
+addCommandAlias("fmtAll", "javafmtAll;scalafmtAll")
 
 // if version was pinned already, read from file, otherwise generate new
 version := {
@@ -66,7 +70,7 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(BuildInfoPlugin)
   .settings(
     name := "sbt-live-reload",
-    description := "Provides an universal Live Reload experience for web applications built with SBT",
+    description := "Provides an universal Live Reload experience for web applications built with sbt",
     scriptedBufferLog := false,
     scriptedBatchExecution := false,
     (pluginCrossBuild / sbtVersion) := {

@@ -21,15 +21,15 @@ compile-sbt:
   {{ sbt }} compile
 
 test-sbt: publish-local-if-unpublished-sbt
-  {{ sbt }} scripted
+  {{ sbt }} quickScripted
 
 publish-local-if-unpublished-sbt:
   (if [ ! -e "$HOME/.ivy2/local/me.seroperson/jvm-live-reload-build-link/" ]; then \
-    {{ sbt }} publishM2 && {{ sbt }} publishLocal; \
+    {{ sbt }} quickLocalPublish; \
   fi) || true
 
 publish-local-sbt:
-  {{ sbt }} publishM2 && {{ sbt }} publishLocal
+  {{ sbt }} quickLocalPublish
 
 publish-sbt:
   {{ sbt }} ci-release
@@ -47,10 +47,10 @@ test-mill: publish-local-if-unpublished-sbt calculate-version
 
 code-format-check-sbt:
   # https://github.com/sbt/sbt/issues/5969
-  {{ sbt }} javafmtCheckAll && {{ sbt }} scalafmtCheckAll
+  {{ sbt }} fmtCheckAll
 
 code-format-apply-sbt:
-  {{ sbt }} javafmtAll && {{ sbt }} scalafmtAll
+  {{ sbt }} fmtAll
 
 code-format-check-mill:
   cd mill && {{ mill }} mill-live-reload.checkFormat

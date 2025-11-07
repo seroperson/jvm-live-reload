@@ -43,11 +43,11 @@ jobs:
       - uses: zhutmost/setup-mill@main
       - uses: gradle/actions/setup-gradle@v5
 
+      - name: Publish local
+        run: just publish-local-if-unpublished-sbt
+
       - name: Check code formatting
         run: just code-format-check-all
-
-      - name: Publish Local sbt
-        run: just publish-local-if-unpublished-sbt
 
       - name: sbt tests
         run: just test-sbt

@@ -1,6 +1,6 @@
 # jvm-live-reload
 
-[![Build Status](https://github.com/seroperson/jvm-live-reload/actions/workflows/build.yml/badge.svg)](https://github.com/seroperson/jvm-live-reload/actions/workflows/build.yml)
+[![Build Status](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml/badge.svg)](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml)
 [![Maven Central Version](https://img.shields.io/maven-central/v/me.seroperson/sbt-jvm-live-reload_2.12)](https://mvnrepository.com/artifact/me.seroperson/sbt-jvm-live-reload_2.12)
 ![Maven Central Last Update](https://img.shields.io/maven-central/last-update/me.seroperson/sbt-jvm-live-reload_2.12)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/seroperson/jvm-live-reload/LICENSE)
@@ -22,6 +22,7 @@ others.
   - [Changes to the application code](#changes-to-the-application-code)
   - [sbt](#sbt)
   - [Gradle](#gradle)
+  - [mill](#mill)
 - [Configuration](#configuration)
 - [List of tested frameworks](#list-of-tested-frameworks)
 - [How it works](#how-it-works)
@@ -33,8 +34,8 @@ others.
 
 To get started, first, you'll probably need to do some changes to the
 application's code and also setup a plugin for your build system. Currently
-supported build systems are `sbt` and `gradle`. We want to cover as much as we
-can, so more build systems will likely be added later.
+supported build systems are `sbt`, `gradle` and `mill`. We want to cover as much
+as we can, so more build systems will likely be added later.
 
 <!-- prettier-ignore-start -->
 > [!IMPORTANT]
@@ -100,6 +101,29 @@ id("me.seroperson.reload.live.gradle") version "0.0.1"
 The command to run your application in live-reloading mode is
 `./gradlew liveReloadRun`.
 
+### mill
+
+Add plugin dependency at the top of `build.mill`:
+
+```
+//| mvnDeps:
+//| - me.seroperson::mill-live-reload::0.0.1
+```
+
+And make your application module extend `LiveReloadModule`:
+
+```scala
+// ...
+import me.seroperson.reload.live.mill.*
+
+object app extends LiveReloadModule, ScalaModule {
+  // ...
+}
+```
+
+The command to run your application in live-reloading mode is
+`mill app.liveReloadRun`.
+
 ## Configuration
 
 This plugin has defaults that should be suitable for most people, but you can
@@ -130,6 +154,20 @@ And for `gradle`:
 
 ```kotlin
 liveReload { settings = mapOf("live.reload.http.port" to "8081") }
+```
+
+And for `mill`:
+
+```scala
+import me.seroperson.reload.live.mill.*
+
+object app extends LiveReloadModule, ScalaModule {
+ def liveDevSettings: Task[Seq[(String, String)]] = Task.Anon {
+    Seq(
+      DevSettingsKeys.LiveReloadHttpPort -> "8081"
+    )
+  }
+}
 ```
 
 ## List of tested frameworks
@@ -280,12 +318,13 @@ The complete list of built-in hooks:
   </tr>
 </table>
 
-The sbt plugin also provides a set of predefined hooks, which will be
-automatically used when the plugin finds the corresponding library in the
-classpath. Currently, supported sets are: `ZioAppHookBundle`, `IoAppHookBundle`
-and `CaskAppHookBundle`. All available options are defined in
-[HookBundle.scala][4]. You can also override a set of startup/shutdown hooks
-using the `liveStartupHooks` and `liveShutdownHooks` keys. For example:
+The `sbt` and `mill` plugins also provide a set of predefined hooks, so-called
+hook bundles, which will be automatically used when a plugin finds the
+corresponding library in a classpath. Currently, supported sets are:
+`ZioAppHookBundle`, `IoAppHookBundle` and `CaskAppHookBundle`. All available
+options are defined in [HookBundle.scala][4]. You can also override a set of
+startup/shutdown hooks using the `liveStartupHooks` and `liveShutdownHooks`
+keys. For example:
 
 ```scala
 // The order matters (!)
@@ -301,7 +340,7 @@ the `me.seroperson.reload.live.hook.Hook` interface and specify it in the build
 configuration. They will be instantiated automatically using reflection during
 proxy webserver startup.
 
-To change hooks for the Gradle plugin, use the following settings:
+To change hooks for the `gradle` plugin, use the following settings:
 
 ```kotlin
 liveReload {
@@ -312,6 +351,20 @@ liveReload {
     "me.seroperson.reload.live.hook.RuntimeShutdownHook",
     "me.seroperson.reload.live.hook.RestApiHealthCheckShutdownHook",
   )
+}
+```
+
+For `mill`:
+
+```scala
+import me.seroperson.reload.live.mill.*
+
+object app extends LiveReloadModule, ScalaModule {
+  def liveStartupHooks: Task[Seq[String]] = Task.Anon {
+    Seq(
+      HookClassnames.RestApiHealthCheckStartup
+    )
+  }
 }
 ```
 

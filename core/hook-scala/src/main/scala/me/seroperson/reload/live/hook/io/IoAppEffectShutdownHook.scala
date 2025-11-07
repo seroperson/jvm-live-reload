@@ -42,11 +42,21 @@ class IoAppEffectShutdownHook extends Hook {
     }
 
     // For some reason this observer isn't unregistering automatically
-    val mBeanServer = ManagementFactory.getPlatformMBeanServer
-    val mBeanObjectName = new ObjectName(
-      "cats.effect.unsafe.metrics:type=CpuStarvation"
-    )
-    mBeanServer.unregisterMBean(mBeanObjectName)
+    def unregisterBean(name: String): Unit = {
+      try {
+        val mBeanServer = ManagementFactory.getPlatformMBeanServer
+        val mBeanObjectName = new ObjectName(name)
+        mBeanServer.unregisterMBean(mBeanObjectName)
+      } catch {
+        case ex: Exception =>
+          logger.debug(
+            s"Error during unregistering monitoring bean: ${ex.getMessage}"
+          )
+      }
+    }
+
+    unregisterBean("cats.effect.metrics:type=CpuStarvation")
+    unregisterBean("cats.effect.unsafe.metrics:type=CpuStarvation")
   }
 
 }
