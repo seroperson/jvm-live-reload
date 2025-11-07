@@ -1,0 +1,10 @@
+# Start dev mode
+> project-a/bgRun
+
+# Existing file change detection
+# $ sleep 100000
+> verifyResourceContains greet 200 "Hello World"
+$ copy-file changes/App.scala.1 project-a/src/main/scala/App.scala
+$ copy-file changes/Text.scala.1 project-b/src/main/scala/Text.scala
+> verifyResourceContains greet_reloaded 200 "World Hello!"
+> verifyResourceContains greet 404

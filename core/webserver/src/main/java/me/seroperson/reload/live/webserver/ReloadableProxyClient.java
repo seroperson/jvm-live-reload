@@ -109,15 +109,18 @@ public class ReloadableProxyClient implements ProxyClient {
                 @Override
                 public void handleEvent(Channel channel) {
                   serverConnection.removeAttachment(clientAttachmentKey);
+                  logger.debug("Closing proxy connection");
                 }
               });
       callback.completed(
           exchange, new ProxyConnection(connection, uri.getPath() == null ? "/" : uri.getPath()));
+      logger.debug("Proxy got response with code " + exchange.getStatusCode());
     }
 
     @Override
     public void failed(IOException e) {
       callback.failed(exchange);
+      logger.error("Error during connection", e);
     }
   }
 }

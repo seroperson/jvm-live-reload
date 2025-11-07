@@ -29,6 +29,7 @@ public class ReloadHandler implements HttpHandler {
       httpServerExchange.putAttachment(WAS_RELOADED, wasReloaded);
 
       next.handleRequest(httpServerExchange);
+      logger.debug("Request successfully handled in ReloadHandler");
     } catch (Throwable e) {
       logger.error("Error during reloading", e);
     }

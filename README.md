@@ -12,23 +12,49 @@
 > [issue][3].
 <!-- prettier-ignore-end -->
 
-This project aims to provide a consistent live reload experience for any web
-application on the JVM. It allows you to speed up your development cycle
-regardless of what framework or library you're using. Basically, it implements
-the approach used in such frameworks as **Spring**, **Play**, **Quarkus**, and
-others.
+This project aims to provide a consistent live reload experience for any **web**
+application (currently you can't yet use it with daemons) on the JVM. It allows
+you to speed up your development cycle regardless of what framework or library
+you're using. Basically, it implements the approach used in such frameworks as
+**Spring**, **Play**, **Quarkus**, and others: when changes occur, reloading
+triggers only when an endpoint is called, not instantly right after a change
+occurs.
 
+- [How it works](#how-it-works)
 - [Installation](#installation)
   - [Changes to the application code](#changes-to-the-application-code)
   - [sbt](#sbt)
   - [Gradle](#gradle)
   - [mill](#mill)
 - [Configuration](#configuration)
-- [List of tested frameworks](#list-of-tested-frameworks)
-- [How it works](#how-it-works)
-  - [Implementation details](#implementation-details)
   - [Hooks](#hooks)
+- [List of tested frameworks](#list-of-tested-frameworks)
 - [License](#license)
+
+## How it works
+
+The core principle is widely known and already adopted by such giants as
+[Spring][6], [Quarkus][7], [Play][5], [Apache Tapestry][8] (and probably more).
+Basically, all of them work like this:
+
+- Starting an application.
+- Watching for project changes.
+- When a change occurs, the application (but not the JVM itself) stops, and the
+  underlying `ClassLoader` gets dropped.
+- The application starts again with a new modified `ClassLoader`.
+
+Such approach allows you to boost your development cycle by saving time on JVM
+startup and system classes initialization. Concrete frameworks can also use some
+additional boost depending on their own structure and lifecycle.
+
+This project utilizes the general approach, but with minor tweaks to make it
+framework-agnostic:
+
+- When run task is called, it starts the reverse-proxy webserver.
+- This proxy starts your underlying application and routes everything into it.
+- When a change occurs, the next request to the proxy will reload the underlying
+  code by re-creating a `ClassLoader` and stopping/starting an underlying
+  application.
 
 ## Installation
 
@@ -42,7 +68,8 @@ as we can, so more build systems will likely be added later.
 > After making all the necessary changes, be sure to read the 
 > [Configuration](#configuration) section to tweak default settings according 
 > to your setup. By default live-reloading proxy will start at `:9000` port 
-> and your application is expected to listen at `:8080`.
+> and your application is expected to listen at `:8080`. You must now send 
+> requests to the proxy, not an application itself.
 <!-- prettier-ignore-end -->
 
 ### Changes to the application code
@@ -170,95 +197,6 @@ object app extends LiveReloadModule, ScalaModule {
 }
 ```
 
-## List of tested frameworks
-
-To minimize any unsuccessful experience, we'll maintain the list of officially
-tested frameworks and libraries right here.
-
-However, even if a framework isn't listed here, it still may play well. If you
-have successfully used this plugin, I would appreciate if you could share your
-project setup [in the relevant discussion][12], even if your setup fully
-consists of libraries listed below. This would help other users to determine
-whether their own setup will work.
-
-<table>
-  <tr>
-    <th>Framework</th>
-    <th>Version</th>
-    <th>Confirmation</th>
-    <th>Necessary changes to the application code</th>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/zio/zio">zio</a> + <a href="https://github.com/zio/zio-http">zio-http</a> + <a href="https://github.com/zio/zio-config">zio-config-typesafe</a></td>
-    <td><i>zio</i> <b>2.1.21</b>, <i>zio-http</i> <b>3.5.1</b>, <i>zio-config</i> <b>4.0.5</b></td>
-    <td>See <code>zio-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
-    <td>Only <code>/health</code> endpoint.</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/http4s/http4s">http4s-ember-server</a> + <a href="https://github.com/typelevel/cats-effect">cats-effect</a> + <a href="https://github.com/pureconfig/pureconfig">pureconfig</a></td>
-    <td><i>http4s-ember-server</i> <b>0.23.30</b>, <i>cats-effect</i> <b>3.6.1</b>, <i>pureconfig</i> <b>0.17.9</b></td>
-    <td>See <code>http4s-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
-    <td>Only <code>/health</code> endpoint.</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/com-lihaoyi/cask">cask</a></td>
-    <td><i>cask</i> <b>0.9.7</b></td>
-    <td>See <code>cask</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
-    <td>Only <code>/health</code> endpoint.</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/ktorio/ktor">ktor</a></td>
-    <td><i>ktor</i> <b>3.3.0</b></td>
-    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadKtorTest.kt">LiveReloadKtorTest.kt</a></td>
-    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/http4k/http4k">http4k</a></td>
-    <td><i>http4k</i> <b>6.18.1.0</b></td>
-    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadHttp4kTest.kt">LiveReloadHttp4kTest.kt</a></td>
-    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
-  </tr>
-  <tr>
-    <td><a href="https://github.com/javalin/javalin">javalin</a></td>
-    <td><i>javalin</i> <b>6.7.0</b></td>
-    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadJavalinTest.kt">LiveReloadHttp4kTest.kt</a></td>
-    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
-  </tr>
-</table>
-
-## How it works
-
-The core principle is widely known and already adopted by such giants as
-[Spring][6], [Quarkus][7], [Play][5], [Apache Tapestry][8] (and probably more).
-Basically, all of them work like this:
-
-- Starting an application.
-- Watching for project changes.
-- When a change occurs, the application (but not the JVM itself) stops, and the
-  underlying `ClassLoader` gets dropped.
-- The application starts again with a new modified `ClassLoader`.
-
-This approach allows you to boost your development cycle by saving time on JVM
-startup and system classes initialization. Concrete frameworks can also use some
-additional boost depending on their own structure and lifecycle.
-
-This project implements Play-like live reloading functionality and is intended
-to be used only with web applications (so you cannot yet use it for daemons as).
-This means that when changes occur, reloading triggers only when an endpoint is
-called, not instantly right after a change occurs.
-
-### Implementation details
-
-Basically, this project works like this:
-
-- When `run` task is called, it starts the reverse-proxy webserver.
-- This proxy starts your underlying application and routes everything into it.
-- When a change occurs, the next request to the proxy will reload the underlying
-  code by re-creating a `ClassLoader` and stopping/starting an underlying
-  application.
-
-An intermediate proxy is required to make this solution universal.
-
 ### Hooks
 
 So far not every framework implements interrupting and graceful shutdown
@@ -367,6 +305,62 @@ object app extends LiveReloadModule, ScalaModule {
   }
 }
 ```
+
+## List of tested frameworks
+
+To minimize any unsuccessful experience, we'll maintain the list of officially
+tested frameworks and libraries right here.
+
+However, even if a framework isn't listed here, it still may play well. If you
+have successfully used this plugin, I would appreciate if you could share your
+project setup [in the relevant discussion][12], even if your setup fully
+consists of libraries listed below. This would help other users to determine
+whether their own setup will work.
+
+<table>
+  <tr>
+    <th>Framework</th>
+    <th>Version</th>
+    <th>Confirmation</th>
+    <th>Necessary changes to the application code</th>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/zio/zio">zio</a> + <a href="https://github.com/zio/zio-http">zio-http</a> + <a href="https://github.com/zio/zio-config">zio-config-typesafe</a></td>
+    <td><i>zio</i> <b>2.1.21</b>, <i>zio-http</i> <b>3.5.1</b>, <i>zio-config</i> <b>4.0.5</b></td>
+    <td>See <code>zio-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/http4s/http4s">http4s-ember-server</a> + <a href="https://github.com/typelevel/cats-effect">cats-effect</a> + <a href="https://github.com/pureconfig/pureconfig">pureconfig</a></td>
+    <td><i>http4s-ember-server</i> <b>0.23.30</b>, <i>cats-effect</i> <b>3.6.1</b>, <i>pureconfig</i> <b>0.17.9</b></td>
+    <td>See <code>http4s-*</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/com-lihaoyi/cask">cask</a></td>
+    <td><i>cask</i> <b>0.9.7</b></td>
+    <td>See <code>cask</code> in <a href="https://github.com/seroperson/jvm-live-reload/tree/main/sbt/src/sbt-test/sbt-live-reload">sbt-test</a> folder.</td>
+    <td>Only <code>/health</code> endpoint.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/ktorio/ktor">ktor</a></td>
+    <td><i>ktor</i> <b>3.3.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadKtorTest.kt">LiveReloadKtorTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/http4k/http4k">http4k</a></td>
+    <td><i>http4k</i> <b>6.18.1.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadHttp4kTest.kt">LiveReloadHttp4kTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/javalin/javalin">javalin</a></td>
+    <td><i>javalin</i> <b>6.7.0</b></td>
+    <td><a href="https://github.com/seroperson/jvm-live-reload/blob/main/gradle/plugin/plugin/src/functionalTest/kotlin/me.seroperson.reload.live.gradle/LiveReloadJavalinTest.kt">LiveReloadHttp4kTest.kt</a></td>
+    <td>Everything from <a href="#changes-to-the-application-code">this section</a>.</td>
+  </tr>
+</table>
 
 ## License
 

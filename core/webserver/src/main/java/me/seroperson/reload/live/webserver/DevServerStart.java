@@ -92,11 +92,6 @@ public class DevServerStart implements ReloadableServer {
             .setHandler(handler)
             .build();
     server.start();
-    logger.info(
-        "Started live-reloading proxy server at "
-            + settings.getProxyHttpHost()
-            + ":"
-            + settings.getProxyHttpPort());
   }
 
   private Hook initHook(String className) {

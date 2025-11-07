@@ -32,10 +32,16 @@ private[sbt] class SbtBuildLogger(
   }
 
   override def info(message: String): Unit = {
+    if (settings.isDebug) {
+      println(message)
+    }
     logger.info(message)
   }
 
   override def warn(message: String): Unit = {
+    if (settings.isDebug) {
+      println(message)
+    }
     logger.warn(message)
   }
 
@@ -54,6 +60,9 @@ private[sbt] class SbtBuildLogger(
   }
 
   override def error(message: String): Unit = {
+    if (settings.isDebug) {
+      println(message)
+    }
     logger.error(message)
   }
 
