@@ -78,29 +78,25 @@ trait LiveReloadModule extends JavaModule {
     )
 
     val reloadCompile: Supplier[CompileResult] = () => {
-      eval
-        .evaluate(Seq("app.compile"))
-        .map {
-          case Evaluator.Result(watched, Result.Failure(err), _, _) =>
-            new CompileFailure(new Throwable(err))
+      eval.execute(Seq(compile)) match {
+        case Evaluator.Result(watched, Result.Failure(err), _, _) =>
+          new CompileFailure(new Throwable(err))
 
-          case Evaluator.Result(
-                watched,
-                Result.Success(_),
-                selectedTasks,
-                executionResults
-              ) =>
-            executionResults.results
-              .flatMap(_.asSuccess)
-              .map(_.value.value.asInstanceOf[CompilationResult])
-              .headOption match {
-              case Some(result) =>
-                new CompileSuccess(Seq(result.classes.path.toIO).asJava)
-              case None =>
-                new CompileFailure(new Throwable("No result"))
-            }
-        }
-        .get
+        case Evaluator.Result(
+              watched,
+              Result.Success(_),
+              selectedTasks,
+              executionResults
+            ) =>
+          val allClasses = executionResults.transitiveResults.map {
+            case (key, value) =>
+              value.asSuccess.map(_.value.value).collect {
+                case x: CompilationResult =>
+                  x.classes.path.toIO
+              }
+          }.flatten
+          new CompileSuccess(allClasses.toList.asJava)
+      }
     }
 
     val taskLog = Task.log
@@ -110,7 +106,7 @@ trait LiveReloadModule extends JavaModule {
       null.asInstanceOf[LoggerProxy]
     )
 
-    DevServerRunner.getInstance.run(
+    val devServer = DevServerRunner.getInstance.run(
       /* settings */ settings,
       /* dependencyClasspath */ resolvedRunMvnDeps().toSeq
         .map(_.path.toIO)
@@ -127,10 +123,14 @@ trait LiveReloadModule extends JavaModule {
       /* logger */ logger
     )
 
-    ConsoleInteractionMode.waitForCancel(
-      taskLog.streams.in,
-      taskLog.streams.out
-    )
+    try {
+      ConsoleInteractionMode.waitForCancel(
+        taskLog.streams.in,
+        taskLog.streams.out
+      )
+    } finally {
+      devServer.close()
+    }
   }
 
 }

@@ -49,7 +49,7 @@ class IntegrationTests extends AnyFunSuite {
 
     val runThread = new Thread(new Runnable() {
       override def run(): Unit = {
-        tester.eval("app.liveReloadRun", stdout = ProcessOutput.Readlines(v => println(v)), mergeErrIntoOut = true)
+        tester.eval("app.liveReloadRun", stdout = ProcessOutput.Readlines(v => println(v)), mergeErrIntoOut = true, timeoutGracePeriod = 10000)
       }
     })
     runThread.start()
@@ -58,7 +58,34 @@ class IntegrationTests extends AnyFunSuite {
     tester.modifyFile(tester.workspacePath / "app" / "src" / "App.scala", _ => os.read(resourceDir / "changes" / "app" / "src" / "App.scala.1"))
     val greetReloaded = runUntil("http://localhost:9000/greet_reloaded", 200, "World Hello")
 
-    runThread.interrupt()
+    tester.close()
+
+    assert(greet && greetReloaded)
+  }
+
+  test("zio-http-multiproject") {
+    val resourceDir = os.Path(BuildInfo.resourceDir) / "zio-http-multiproject"
+
+    val tester = new IntegrationTester(
+      daemonMode = false,
+      workspaceSourcePath = resourceDir,
+      millExecutable = os.Path(BuildInfo.exePath),
+      // debugLog = true
+    )
+
+    val runThread = new Thread(new Runnable() {
+      override def run(): Unit = {
+        tester.eval("project-a.liveReloadRun", stdout = ProcessOutput.Readlines(v => println(v)), mergeErrIntoOut = true)
+      }
+    })
+    runThread.start()
+
+    val greet = runUntil("http://localhost:9000/greet", 200, "Hello World")
+    tester.modifyFile(tester.workspacePath / "project-a" / "src" / "App.scala", _ => os.read(resourceDir / "changes" / "project-a" / "src" / "App.scala.1"))
+    tester.modifyFile(tester.workspacePath / "project-b" / "src" / "Text.scala", _ => os.read(resourceDir / "changes" / "project-b" / "src" / "Text.scala.1"))
+    val greetReloaded = runUntil("http://localhost:9000/greet_reloaded", 200, "World Hello!")
+
+    tester.close()
 
     assert(greet && greetReloaded)
   }

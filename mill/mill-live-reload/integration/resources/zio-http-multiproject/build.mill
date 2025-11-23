@@ -1,0 +1,22 @@
+//| mvnDeps:
+//| - me.seroperson::mill-live-reload::0.0.1
+package build
+
+import mill.*
+import mill.*, scalalib.*, publish.*
+import me.seroperson.reload.live.mill.*
+
+object `project-a` extends LiveReloadModule, ScalaModule {
+
+  override def scalaVersion = "3.7.3"
+  override def mvnDeps = super.mvnDeps() ++ Seq(mvn"dev.zio::zio-http:3.5.1")
+
+  override def moduleDeps =
+    super.moduleDeps ++ Seq(`project-b`)
+}
+
+object `project-b` extends ScalaModule {
+
+  override def scalaVersion = "3.7.3"
+
+}
