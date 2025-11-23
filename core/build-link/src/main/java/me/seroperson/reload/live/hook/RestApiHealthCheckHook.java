@@ -28,14 +28,5 @@ interface RestApiHealthCheckHook extends HealthCheckHook {
     } catch (Exception e) {
       return false;
     }
-    // HttpClient isn't AutoClosable in pre-21
-    /*try (HttpClient client = HttpClient.newHttpClient()) {
-        HttpRequest request =
-                HttpRequest.newBuilder().uri(new URI("http://" + host + ":" + port + path)).GET()
-                        .timeout(java.time.Duration.ofMillis(500)).build();
-        return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200;
-    } catch (Exception e) {
-        return false;
-    }*/
   }
 }

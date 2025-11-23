@@ -3,6 +3,7 @@ package me.seroperson.reload.live.gradle
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServer
 import me.seroperson.reload.live.runner.DevServerRunner
+import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
 import org.gradle.deployment.internal.Deployment
 import org.gradle.deployment.internal.DeploymentHandle
@@ -62,23 +63,26 @@ open class LiveReloadRunHandle
             lock.writeLock().lock()
             this.deployment = deployment
             try {
+                val params =
+                    StartParams(
+                        DevServerSettings(listOf(), listOf(), params.settings),
+                        params.dependencyClasspath.toList(),
+                        listOf(),
+                        "me.seroperson.reload.live.webserver.DevServerStart",
+                        params.mainClass,
+                        params.startupHooks,
+                        params.shutdownHooks,
+                    )
+
+                val devServerRunner = DevServerRunner.getInstance()
                 devServer =
-                    DevServerRunner
-                        .getInstance()
-                        .run(
-                            DevServerSettings(listOf(), listOf(), params.settings),
-                            params.dependencyClasspath.toList(),
-                            this::reloadCompile,
-                            this::isChanged,
-                            listOf(),
-                            null,
-                            "me.seroperson.reload.live.webserver.DevServerStart",
-                            params.mainClass,
-                            lock,
-                            params.startupHooks,
-                            params.shutdownHooks,
-                            LiveReloadLogger(),
-                        )
+                    devServerRunner.runBackground(
+                        params,
+                        this::reloadCompile,
+                        this::isChanged,
+                        null,
+                        LiveReloadLogger(),
+                    )
             } finally {
                 lock.writeLock().unlock()
             }

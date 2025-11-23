@@ -77,12 +77,7 @@ public class DevServerStart implements ReloadableServer {
             logger, URI.create("http://" + settings.getHttpHost() + ":" + settings.getHttpPort()));
     var proxyHandler =
         new ProxyHandler(
-            proxyClientProvider,
-            30000,
-            ResponseCodeHandler.HANDLE_404,
-            false,
-            false, /* retries */
-            2);
+            proxyClientProvider, 30000, ResponseCodeHandler.HANDLE_404, false, false, 2);
 
     var handler = new ReloadHandler(logger, this, proxyHandler);
 
@@ -130,27 +125,7 @@ public class DevServerStart implements ReloadableServer {
                 stopInternal();
                 throw new RuntimeException(e);
               } catch (InvocationTargetException e) {
-                // Hard times of debugging
-                // todo: clean this mess just a little
-
-                // logger.error("Got InvocationTargetException. Its' classloader: " +
-                // e.getCause().getClass().getClassLoader());
-                logger.debug(
-                    "Got InvocationTargetException: Its' cause: "
-                        + e.getCause().getClass().getName());
-                // logger.error("Current classloader: " + getClass().getClassLoader());
-                if (e.getCause().getClass().getName().equals("zio.FiberFailure")
-                    || e.getCause() instanceof InterruptedException) {
-                  // doing nothing
-                  logger.debug(
-                      "Application thread was interrupted (cause: "
-                          + e.getCause().getClass().getName()
-                          + ")");
-                } else {
-                  logger.error(
-                      "Error in application main thread (cause: " + e.getCause() + ")",
-                      e.getCause());
-                }
+                logger.error("Error in application main thread", e);
               }
             });
     appThread.setContextClassLoader(classLoader);
@@ -204,7 +179,6 @@ public class DevServerStart implements ReloadableServer {
     var reloadResult = buildLink.reload();
     if (reloadResult instanceof ReloadGeneration) {
       var casted = (ReloadGeneration) reloadResult;
-      logger.debug("Got reload result, iteration (" + casted.getIteration() + ")");
       // New application classes
       logger.info("🔃 Reloading an application");
       stopInternal();

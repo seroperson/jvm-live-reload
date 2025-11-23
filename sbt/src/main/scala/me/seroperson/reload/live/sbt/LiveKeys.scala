@@ -38,10 +38,6 @@ object LiveKeys {
   val liveFileWatchService =
     settingKey[FileWatchService]("The watch service to catch file changes.")
 
-  val liveInteractionMode = settingKey[InteractionMode](
-    "Console interaction mode (non-interactive or interactive)."
-  )
-
   val liveHookBundle = taskKey[Option[HookBundle]](
     "If defined, hooks are loaded from predefined set."
   )

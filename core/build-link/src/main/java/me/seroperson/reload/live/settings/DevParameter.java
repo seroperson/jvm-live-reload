@@ -13,7 +13,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the parameter value
  */
-public class DevParameter<T> {
+public final class DevParameter<T> {
 
   private final String argKey;
   private final String envKey;

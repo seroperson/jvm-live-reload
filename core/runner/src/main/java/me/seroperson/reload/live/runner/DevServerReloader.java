@@ -23,11 +23,9 @@ import me.seroperson.reload.live.runner.classloader.NamedURLClassLoader;
 import play.dev.filewatch.FileWatchService;
 import play.dev.filewatch.FileWatcher;
 
-class DevServerReloader implements BuildLink, Closeable {
+final class DevServerReloader implements BuildLink, Closeable {
 
   private static final AccessControlContext accessControlContext = AccessController.getContext();
-
-  private final Object reloadLock;
 
   private final Supplier<CompileResult> compile;
 
@@ -61,8 +59,7 @@ class DevServerReloader implements BuildLink, Closeable {
       Supplier<CompileResult> compile,
       Supplier<Boolean> triggerReload,
       List<File> monitoredFiles,
-      FileWatchService fileWatchService,
-      Object reloadLock) {
+      FileWatchService fileWatchService) {
     this.dependenciesClassLoader = dependenciesClassLoader;
     this.compile = compile;
     this.triggerReload = triggerReload;
@@ -78,7 +75,6 @@ class DevServerReloader implements BuildLink, Closeable {
     } else {
       this.watcher = null;
     }
-    this.reloadLock = reloadLock;
   }
 
   /** Execute f with context ClassLoader of Reloader */
@@ -190,21 +186,19 @@ class DevServerReloader implements BuildLink, Closeable {
    *     - {@code null} - If nothing changed.
    */
   @Override
-  public Object reload() {
-    synchronized (reloadLock) {
-      if (changed
-          || (triggerReload != null && triggerReload.get())
-          || forceReloadNextTime
-          || currentApplicationClassLoader == null) {
-        var shouldReload = forceReloadNextTime;
-        changed = false;
-        forceReloadNextTime = false;
-        // use Reloader context ClassLoader to avoid ClassLoader leaks in
-        // sbt/scala-compiler threads
-        return withReloaderContextClassLoader(() -> reload(shouldReload));
-      } else {
-        return null; // null means nothing changed
-      }
+  public synchronized Object reload() {
+    if (changed
+        || (triggerReload != null && triggerReload.get())
+        || forceReloadNextTime
+        || currentApplicationClassLoader == null) {
+      var shouldReload = forceReloadNextTime;
+      changed = false;
+      forceReloadNextTime = false;
+      // use Reloader context ClassLoader to avoid ClassLoader leaks in
+      // sbt/scala-compiler threads
+      return withReloaderContextClassLoader(() -> reload(shouldReload));
+    } else {
+      return null; // null means nothing changed
     }
   }
 
@@ -218,6 +212,7 @@ class DevServerReloader implements BuildLink, Closeable {
     }
   }
 
+  @Override
   public void close() {
     currentApplicationClassLoader = null;
     if (watcher != null) watcher.stop();

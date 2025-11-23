@@ -15,10 +15,7 @@
 This project aims to provide a consistent live reload experience for any **web**
 application (currently you can't yet use it with daemons) on the JVM. It allows
 you to speed up your development cycle regardless of what framework or library
-you're using. Basically, it implements the approach used in such frameworks as
-**Spring**, **Play**, **Quarkus**, and others: when changes occur, reloading
-triggers only when an endpoint is called, not instantly right after a change
-occurs.
+you're using.
 
 - [How it works](#how-it-works)
 - [Installation](#installation)
@@ -395,7 +392,7 @@ SOFTWARE.
 <!-- prettier-ignore-start -->
 [1]: https://github.com/jj-vcs/jj
 [2]: https://github.com/playframework/playframework
-[3]: https://github.com/seroperson/jvm-live-reload/issues/new
+[3]: https://github.com/seroperson/jvm-live-reload/issues/new?template=1-not_working_setup.yml
 [4]: https://github.com/seroperson/jvm-live-reload/blob/main/sbt/src/main/scala/me/seroperson/reload/live/sbt/HookBundle.scala
 [5]: https://jto.github.io/articles/play_anatomy_part2_sbt/
 [6]: https://docs.spring.io/spring-boot/reference/using/devtools.html

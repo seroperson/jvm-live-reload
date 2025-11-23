@@ -92,7 +92,7 @@ lazy val `webserver` = (project in file("core/webserver"))
   .settings(
     name := "jvm-live-reload-webserver",
     description := "Development-mode proxy webserver for Live Reload experience on JVM",
-    libraryDependencies ++= Seq(
+    libraryDependencies := Seq(
       "io.undertow" % "undertow-core" % "2.3.20.Final"
     )
   )
@@ -103,7 +103,10 @@ lazy val `runner` = (project in file("core/runner"))
   .settings(
     name := "jvm-live-reload-runner",
     description := "Contains an universal Live Reload webserver initialization and reloading logic",
-    libraryDependencies += "org.playframework" % "play-file-watch" % "3.0.0-M4"
+    libraryDependencies := Seq(
+      "org.playframework" % "play-file-watch" % "3.0.0-M4",
+      "org.jline" % "jline" % "3.30.6"
+    )
   )
   .dependsOn(`buildLink`)
 
@@ -118,7 +121,7 @@ lazy val `hookScala` = (projectMatrix in file("core/hook-scala"))
   .settings(
     name := "jvm-live-reload-hook-scala",
     description := "Predefined set of hooks for popular Scala webframeworks",
-    libraryDependencies ++= Seq(
+    libraryDependencies := Seq(
       "dev.zio" %% "zio-http" % "3.5.1" % Provided,
       "org.typelevel" %% "cats-effect" % "3.6.3" % Provided
     )

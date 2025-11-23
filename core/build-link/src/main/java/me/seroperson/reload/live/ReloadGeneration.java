@@ -3,7 +3,7 @@ package me.seroperson.reload.live;
 /**
  * Represents a successful reload iteration. Has an index and a ClassLoader with new reloaded code.
  */
-public class ReloadGeneration {
+public final class ReloadGeneration {
 
   private final int iteration;
   private final ClassLoader reloadedClassLoader;

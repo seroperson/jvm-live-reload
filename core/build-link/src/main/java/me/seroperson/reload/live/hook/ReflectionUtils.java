@@ -10,7 +10,7 @@ import me.seroperson.reload.live.build.BuildLogger;
  * hooks via reflection, which is useful for live reload scenarios where normal shutdown procedures
  * need to be controlled.
  */
-public class ReflectionUtils {
+public final class ReflectionUtils {
 
   /**
    * Checks if a class with the given name is available on the classpath.

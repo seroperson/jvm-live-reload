@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * <p>The development server acts as a proxy that sits between the client and the actual application
  * server, enabling live reload functionality.
  */
-public class DevServerSettings {
+public final class DevServerSettings {
 
   private static final Pattern SYSTEM_PROPERTY = Pattern.compile("-D([^=]+)=(.*)");
   public static final String LiveReloadProxyHttpHost = "live.reload.proxy.http.host";

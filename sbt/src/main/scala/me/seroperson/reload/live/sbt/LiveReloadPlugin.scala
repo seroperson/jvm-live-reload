@@ -41,7 +41,6 @@ object LiveReloadPlugin extends AutoPlugin {
       pollInterval.value.toMillis.toInt,
       null.asInstanceOf[LoggerProxy]
     ),
-    liveInteractionMode := ConsoleInteractionMode,
     liveDevSettings := Nil,
     liveMonitoredFiles := Commands.liveMonitoredFilesTask.value,
     // all dependencies from outside the project (all dependency jars)

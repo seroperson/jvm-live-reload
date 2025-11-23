@@ -5,23 +5,20 @@ import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.CompileResult.CompileFailure
 import me.seroperson.reload.live.runner.CompileResult.CompileSuccess
 import me.seroperson.reload.live.runner.DevServerRunner
+import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
 import mill.*
-import mill.api.BuildCtx
 import mill.api.Evaluator
-import mill.api.ExecutionPaths
 import mill.api.Task.Simple
 import mill.api.TaskCtx
-import mill.api.daemon.MillURLClassLoader
 import mill.api.daemon.Result
 import mill.javalib.Dep
 import mill.javalib.JavaModule
 import mill.javalib.api.CompilationResult
-import mill.util.Jvm
+import mill.scalalib.*
 import play.dev.filewatch.FileWatchService
 import play.dev.filewatch.LoggerProxy
 import scala.jdk.CollectionConverters.*
-import scalalib.*
 
 trait LiveReloadModule extends JavaModule {
 
@@ -37,11 +34,11 @@ trait LiveReloadModule extends JavaModule {
 
   def liveHookBundle: Task[Option[HookBundle]] = Task.Anon {
     runClasspath().collectFirst {
-      case lib if lib.path.toIO.getName().startsWith("zio-http") =>
+      case lib if lib.path.toIO.getName.startsWith("zio-http") =>
         ZioAppHookBundle
-      case lib if lib.path.toIO.getName().startsWith("http4s") =>
+      case lib if lib.path.toIO.getName.startsWith("http4s") =>
         IoAppHookBundle
-      case lib if lib.path.toIO.getName().startsWith("cask") =>
+      case lib if lib.path.toIO.getName.startsWith("cask") =>
         CaskAppHookBundle
     }
   }
@@ -88,13 +85,13 @@ trait LiveReloadModule extends JavaModule {
               selectedTasks,
               executionResults
             ) =>
-          val allClasses = executionResults.transitiveResults.map {
+          val allClasses = executionResults.transitiveResults.flatMap {
             case (key, value) =>
               value.asSuccess.map(_.value.value).collect {
                 case x: CompilationResult =>
                   x.classes.path.toIO
               }
-          }.flatten
+          }
           new CompileSuccess(allClasses.toList.asJava)
       }
     }
@@ -106,31 +103,28 @@ trait LiveReloadModule extends JavaModule {
       null.asInstanceOf[LoggerProxy]
     )
 
-    val devServer = DevServerRunner.getInstance.run(
+    val params = new StartParams(
       /* settings */ settings,
-      /* dependencyClasspath */ resolvedRunMvnDeps().toSeq
+      /* dependencyClasspath */ resolvedRunMvnDeps()
         .map(_.path.toIO)
         .asJava,
-      /* reloadCompile */ reloadCompile,
-      /* triggerReload */ null,
       /* monitoredFiles */ sources().map(_.path.toIO).asJava,
-      /* fileWatchService */ fileWatchService,
       /* mainClassName */ "me.seroperson.reload.live.webserver.DevServerStart",
       /* internalMainClassName */ finalMainClass(),
-      /* reloadLock */ LiveReloadModule,
       /* startupHookClasses */ liveStartupHooks().asJava,
-      /* shutdownHookClasses */ liveShutdownHooks().asJava,
-      /* logger */ logger
+      /* shutdownHookClasses */ liveShutdownHooks().asJava
     )
 
-    try {
-      ConsoleInteractionMode.waitForCancel(
-        taskLog.streams.in,
-        taskLog.streams.out
-      )
-    } finally {
-      devServer.close()
-    }
+    val devServerRunner = DevServerRunner.getInstance
+    devServerRunner.runBlocking(
+      params,
+      reloadCompile,
+      /* triggerReload */ null,
+      fileWatchService,
+      logger,
+      taskLog.streams.in,
+      taskLog.streams.out
+    )
   }
 
 }
