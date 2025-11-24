@@ -220,7 +220,6 @@ public final class DevServerRunner {
               + RESET);
       logger.info("ℹ️ Perform a first request to start the underlying server");
       logger.info("   Use " + UNDERLINED + "Enter" + RESET + " to stop and exit");
-      logger.info("");
 
       try (var terminal = TerminalBuilder.builder().streams(in, out).build()) {
         terminal.echo(false);

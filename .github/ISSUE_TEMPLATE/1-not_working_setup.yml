@@ -11,6 +11,8 @@ body:
 
         Reproduction steps, if any ...
 
+        Be sure to attach logs with `live.reload.debug` property set to `"true"`.
+
         A list of used dependencies, web framework, any additional information
         which would help us with reproducing your setup.
     validations:

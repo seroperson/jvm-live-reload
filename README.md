@@ -17,12 +17,17 @@ application (currently you can't yet use it with daemons) on the JVM. It allows
 you to speed up your development cycle regardless of what framework or library
 you're using.
 
+<p align="center">
+  <img src=".github/preview.gif" alt="Preview" width="700px">
+</p>
+
 - [How it works](#how-it-works)
 - [Installation](#installation)
   - [Changes to the application code](#changes-to-the-application-code)
   - [sbt](#sbt)
   - [Gradle](#gradle)
   - [mill](#mill)
+  - [Fixing the InaccessibleObjectException error](#fixing-the-inaccessibleobjectexception-error)
 - [Configuration](#configuration)
   - [Hooks](#hooks)
 - [List of tested frameworks](#list-of-tested-frameworks)
@@ -129,7 +134,7 @@ The command to run your application in live-reloading mode is
 
 Add plugin dependency at the top of `build.mill`:
 
-```
+```scala
 //| mvnDeps:
 //| - me.seroperson::mill-live-reload::0.0.1
 ```
@@ -147,6 +152,23 @@ object app extends LiveReloadModule, ScalaModule {
 
 The command to run your application in live-reloading mode is
 `mill app.liveReloadRun`.
+
+### Fixing the InaccessibleObjectException error
+
+As this plugin uses some internal classes that aren't available without extra
+configuration, you may encounter errors like this during reloading (you can
+enable stacktrace displaying using `live.reload.debug` property):
+
+```text
+java.lang.reflect.InaccessibleObjectException: Unable to make static void java.lang.ApplicationShutdownHooks.runHooks() accessible: module java.base does not "opens java.lang" to unnamed module @77e282b6
+```
+
+Then you need either tweak environment variable or add this option to [your
+IDE's Java runtime][14]:
+
+```sh
+export JDK_JAVA_OPTIONS="$JDK_JAVA_OPTIONS --add-opens=java.base/java.lang=ALL-UNNAMED"
+```
 
 ## Configuration
 
@@ -403,4 +425,5 @@ SOFTWARE.
 [11]: https://quarkus.io
 [12]: https://github.com/seroperson/jvm-live-reload/discussions/1
 [13]: https://seroperson.me/2025/10/20/interrupting-jvm-application/
+[14]: https://www.jetbrains.com/help/idea/tuning-the-ide.html#procedure-jvm-options
 <!-- prettier-ignore-end -->
