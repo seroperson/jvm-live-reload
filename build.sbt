@@ -75,7 +75,7 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
     scriptedBatchExecution := false,
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
-        case "2.12" => "1.10.10"
+        case "2.12" => "1.11.7"
         case _      => "2.0.0-RC6"
       }
     },

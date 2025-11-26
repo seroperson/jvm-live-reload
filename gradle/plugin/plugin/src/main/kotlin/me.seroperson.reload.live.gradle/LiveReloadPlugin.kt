@@ -4,9 +4,6 @@ import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.component.ComponentIdentifier
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
@@ -22,6 +19,8 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class LiveReloadPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -74,30 +73,10 @@ class LiveReloadPlugin : Plugin<Project> {
 
                     val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
                     t.runtimeClasspath.from(runtime.incoming.files)
-
-                    filterProjectComponents(runtime).forEach { path ->
-                        val child = project.findProject(path) ?: return@forEach
-                        t.classes.from(findClasspathDirectories(child))
-                        t.dependsOn(child.tasks.findByName(PROCESS_RESOURCES_TASK_NAME)!!)
-                    }
                 }
             },
         )
     }
-
-    private fun isProjectComponent(component: ComponentIdentifier): Boolean = component is ProjectComponentIdentifier
-
-    private fun filterProjectComponents(configuration: Configuration): List<String> =
-    /*configuration.incoming
-    .artifactView(
-        object : Action<ArtifactView.ViewConfiguration> {
-            override fun execute(t: ArtifactView.ViewConfiguration) {
-                t.componentFilter { value -> isProjectComponent(value) }
-            }
-        },
-    ).artifacts
-    .map { (it.variant.owner as ProjectComponentIdentifier).projectPath }*/
-        listOf()
 
     private fun javaPluginExtension(project: Project): JavaPluginExtension = extensionOf(project, JavaPluginExtension::class.java)
 
@@ -109,4 +88,8 @@ class LiveReloadPlugin : Plugin<Project> {
         extensionAware: ExtensionAware,
         type: Class<T>,
     ): T = extensionAware.extensions.getByType<T>(type)!!
+
+    companion object {
+        private val logger: Logger = LoggerFactory.getLogger(LiveReloadPlugin::class.java)
+    }
 }

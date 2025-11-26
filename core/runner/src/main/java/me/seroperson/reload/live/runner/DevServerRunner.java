@@ -25,16 +25,6 @@ import play.dev.filewatch.FileWatchService;
  * automatic reloading when source code changes are detected. It uses a custom classloader hierarchy
  * to enable hot-reloading of application code while maintaining shared classes between reloads.
  *
- * <p>The classloader hierarchy is structured as:
- *
- * <pre>
- * rootClassLoader (system classes)
- * └── buildLoader (build tool classes)
- *     └── sharedClassesLoader (delegates specific shared classes)
- *         └── dependenciesClassLoader (application dependencies)
- *             └── currentApplicationClassLoader (user code, recreated on reload)
- * </pre>
- *
  * <p>This class follows the singleton pattern and should be accessed via {@link #getInstance()}.
  */
 public final class DevServerRunner {
@@ -73,12 +63,14 @@ public final class DevServerRunner {
     // settings.getMergedProperties().forEach(System::setProperty);
 
     /*
-      rootClassLoader - system classes
-      └── buildLoader - sbt classes
-      └── sharedClassesLoader - delegates specific shared classes to buildLoader, everything else to rootClassLoader
-          └── dependenciesClassLoader - all jars
-          └── currentApplicationClassLoader - user code, recreated on reload
-    */
+     * @formatter:off
+     * rootClassLoader - system classes
+     * └── buildLoader - sbt classes
+     * └── sharedClassesLoader - delegates specific shared classes to buildLoader, everything else to rootClassLoader
+     *     └── dependenciesClassLoader - all jars
+     *     └── currentApplicationClassLoader - user code, recreated on reload
+     * @formatter:on
+     */
     var buildLoader = this.getClass().getClassLoader();
     var rootClassLoader = java.lang.ClassLoader.getSystemClassLoader().getParent();
 
@@ -165,14 +157,6 @@ public final class DevServerRunner {
    * current thread and displays server information to the user. The server will continue running
    * until the user presses Enter or sends EOF signal.
    *
-   * <p>This method displays:
-   *
-   * <ul>
-   *   <li>The proxy server URL where the application is accessible
-   *   <li>The underlying server URL being proxied
-   *   <li>Instructions for stopping the server
-   * </ul>
-   *
    * @param params the startup parameters containing server configuration and classpath information
    * @param reloadCompile a supplier that triggers compilation and returns the compilation result
    * @param triggerReload a supplier that triggers a reload check and returns whether reload is
@@ -194,36 +178,13 @@ public final class DevServerRunner {
       OutputStream out) {
     try (var devServer =
         runBackground(params, reloadCompile, triggerReload, fileWatchService, logger)) {
-      var GREEN = "\u001b[32m";
-      var RESET = "\u001b[0m";
-      var UNDERLINED = "\u001b[4m";
 
-      var settings = params.getSettings();
-
-      logger.info("");
-      logger.info("🎉 Development Live Reload server successfully started!");
-      logger.info(
-          "🚀 Serving at:    "
-              + GREEN
-              + "http://"
-              + settings.getProxyHttpHost()
-              + ":"
-              + settings.getProxyHttpPort()
-              + RESET);
-      logger.info(
-          "   Proxifying to: "
-              + GREEN
-              + "http://"
-              + settings.getHttpHost()
-              + ":"
-              + settings.getHttpPort()
-              + RESET);
-      logger.info("ℹ️ Perform a first request to start the underlying server");
+      printBanner(params, logger);
       logger.info("   Use " + UNDERLINED + "Enter" + RESET + " to stop and exit");
 
       try (var terminal = TerminalBuilder.builder().streams(in, out).build()) {
         terminal.echo(false);
-        waitEOF(terminal.reader());
+        waitEOF(terminal.reader(), logger);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -233,18 +194,47 @@ public final class DevServerRunner {
     }
   }
 
-  private void waitEOF(NonBlockingReader reader) throws IOException {
+  private void waitEOF(NonBlockingReader reader, BuildLogger logger) throws IOException {
     var symbol = reader.read();
     // 4, 13: STOP on Ctrl-D or Enter
     // 11: Clear screen
     // 10: Enter
     if (symbol == 4 || symbol == 13 || symbol == 11) {
-      waitEOF(reader);
+      waitEOF(reader, logger);
     } else if (symbol == 10) {
-      System.out.println("🛑 Stopping the application");
+      logger.info("🛑 Stopping the application");
     } else {
-      waitEOF(reader);
+      waitEOF(reader, logger);
     }
+  }
+
+  private static final String GREEN = "\u001b[32m";
+  private static final String RESET = "\u001b[0m";
+  private static final String UNDERLINED = "\u001b[4m";
+
+  /** Prints beautiful banner with basic plugin settings */
+  public static void printBanner(StartParams params, BuildLogger logger) {
+    var settings = params.getSettings();
+
+    logger.info("");
+    logger.info("🎉 Development Live Reload server successfully started!");
+    logger.info(
+        "🚀 Serving at:    "
+            + GREEN
+            + "http://"
+            + settings.getProxyHttpHost()
+            + ":"
+            + settings.getProxyHttpPort()
+            + RESET);
+    logger.info(
+        "   Proxifying to: "
+            + GREEN
+            + "http://"
+            + settings.getHttpHost()
+            + ":"
+            + settings.getHttpPort()
+            + RESET);
+    logger.info("ℹ️ Perform a first request to start the underlying server");
   }
 
   /**
@@ -278,9 +268,6 @@ public final class DevServerRunner {
 
   /**
    * Returns the singleton instance of DevServerRunner.
-   *
-   * <p>This method uses the initialization-on-demand holder pattern to ensure thread-safe lazy
-   * initialization of the singleton instance.
    *
    * @return the singleton DevServerRunner instance
    */

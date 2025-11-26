@@ -10,6 +10,8 @@ import sbt.taskKey
 
 object LiveKeys {
 
+  val LiveReloadPlugin = me.seroperson.reload.live.sbt.LiveReloadPlugin
+
   object HookClassnames {
     // format: off
     val IoAppStartup = "me.seroperson.reload.live.hook.io.IoAppStartupHook"

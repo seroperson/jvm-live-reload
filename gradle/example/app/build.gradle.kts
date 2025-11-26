@@ -19,6 +19,10 @@ dependencies {
     implementation("io.ktor:ktor-server-netty:3.3.0")
 
     implementation("io.javalin:javalin:6.7.0")
+
+    implementation(project(":subproject"))
 }
+
+liveReload { settings = mapOf("live.reload.http.port" to "8081") }
 
 application { mainClass = "AppHttp4kKt" }

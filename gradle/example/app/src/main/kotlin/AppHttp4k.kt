@@ -9,7 +9,7 @@ import org.http4k.server.asServer
 fun main() {
     val endpoints =
         listOf(
-            "/greet" bind Method.GET to { Response(OK).body("Hello World") },
+            "/greet" bind Method.GET to { Response(OK).body(Text.RESPONSE + "!") },
             "/health" bind Method.GET to { Response(OK) },
         )
 

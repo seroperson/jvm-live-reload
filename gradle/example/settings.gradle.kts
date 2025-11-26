@@ -8,4 +8,4 @@ pluginManagement {
     }
 }
 
-include("app")
+include("app", "subproject")

@@ -8,7 +8,7 @@ import io.ktor.server.routing.routing
 fun main() {
     embeddedServer(Netty, port = 8081) {
         routing {
-            get("/greet") { call.respondText("Hello World") }
+            get("/greet") { call.respondText(Text.RESPONSE) }
             get("/health") { call.respond(HttpStatusCode.OK, null) }
         }
     }.start(wait = true)

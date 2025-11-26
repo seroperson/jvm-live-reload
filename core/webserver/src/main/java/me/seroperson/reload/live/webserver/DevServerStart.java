@@ -125,7 +125,11 @@ public class DevServerStart implements ReloadableServer {
                 stopInternal();
                 throw new RuntimeException(e);
               } catch (InvocationTargetException e) {
-                logger.error("Error in application main thread", e);
+                if (e.getCause() instanceof InterruptedException) {
+                  // Don't log InterruptedException, as likely they're intended
+                } else {
+                  logger.error("Error in application main thread", e);
+                }
               }
             });
     appThread.setContextClassLoader(classLoader);

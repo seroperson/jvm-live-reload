@@ -65,8 +65,10 @@ open class LiveReloadRunHandle
             try {
                 val params =
                     StartParams(
+                        // todo: deal with args, properties and java options
                         DevServerSettings(listOf(), listOf(), params.settings),
                         params.dependencyClasspath.toList(),
+                        // monitoredFiles
                         listOf(),
                         "me.seroperson.reload.live.webserver.DevServerStart",
                         params.mainClass,
@@ -74,15 +76,19 @@ open class LiveReloadRunHandle
                         params.shutdownHooks,
                     )
 
+                val buildLogger = LiveReloadLogger()
                 val devServerRunner = DevServerRunner.getInstance()
                 devServer =
                     devServerRunner.runBackground(
                         params,
                         this::reloadCompile,
                         this::isChanged,
+                        // fileWatcherService
                         null,
-                        LiveReloadLogger(),
+                        buildLogger,
                     )
+                // Visible only when running with `--info`
+                DevServerRunner.printBanner(params, buildLogger)
             } finally {
                 lock.writeLock().unlock()
             }
