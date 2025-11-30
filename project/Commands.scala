@@ -17,15 +17,6 @@ object Commands {
 
     val toggle = !state.get(quickPublishToggle).getOrElse(true)
 
-    val filtered = session.mergeSettings.filter { setting =>
-      setting.key match {
-        case Def.ScopedKey(Scope(_, Zero, Zero, Zero), key)
-            if key == publishArtifact.key =>
-          false
-        case other => true
-      }
-    }
-
     if (toggle) {
       state.log.info("Turning off quick publish")
     } else {
@@ -33,7 +24,7 @@ object Commands {
     }
 
     projectExtract.appendWithoutSession(
-      filtered ++ Seq(
+      Seq(
         GlobalScope / packageDoc / publishArtifact := toggle,
         GlobalScope / packageSrc / publishArtifact := toggle,
         GlobalScope / publishArtifact := true

@@ -1,4 +1,4 @@
-# jvm-live-reload
+# ♾️ jvm-live-reload
 
 [![Build Status](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml/badge.svg)](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml)
 [![Maven Central Version](https://img.shields.io/maven-central/v/me.seroperson/sbt-jvm-live-reload_2.12)](https://mvnrepository.com/artifact/me.seroperson/sbt-jvm-live-reload_2.12)
@@ -15,7 +15,9 @@
 This project aims to provide a consistent live reload experience for any **web**
 application (currently you can't yet use it with daemons) on the JVM. It allows
 you to speed up your development cycle regardless of what framework or library
-you're using.
+you're using. Read an article **[♾️ Live Reloading on JVM][15]** for more
+information on the reloading topic and prerequisites for the creation of this
+project.
 
 <p align="center">
   <img src=".github/preview.gif" alt="Preview" width="700px">
@@ -91,7 +93,7 @@ change in your application to make it live-reloading-ready:
 
 Implementing this logic will also make your application lifecycle more
 predictable in general, so they are just nice to have besides making an
-application live-reloading-ready. Read an article **[⏹️ About making your JVM
+application live-reloading-ready. Read an article **[⏹️ Making your JVM
 application interruptible][13]** to know more about interrupting.
 
 Worth to say, that if your framework doesn't support interrupting and/or doesn't
@@ -426,4 +428,5 @@ SOFTWARE.
 [12]: https://github.com/seroperson/jvm-live-reload/discussions/1
 [13]: https://seroperson.me/2025/10/20/interrupting-jvm-application/
 [14]: https://www.jetbrains.com/help/idea/tuning-the-ide.html#procedure-jvm-options
+[15]: https://seroperson.me/2025/11/28/jvm-live-reload/
 <!-- prettier-ignore-end -->

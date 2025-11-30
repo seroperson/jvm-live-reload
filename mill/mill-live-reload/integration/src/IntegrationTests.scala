@@ -49,7 +49,13 @@ class IntegrationTests extends AnyFunSuite {
 
     val runThread = new Thread(new Runnable() {
       override def run(): Unit = {
-        tester.eval("app.liveReloadRun", stdout = ProcessOutput.Readlines(v => println(v)), mergeErrIntoOut = true, timeoutGracePeriod = 10000)
+        tester.eval(
+          "app.liveReloadRun",
+          env = Map("PLUGIN_VERSION" -> BuildInfo.version),
+          stdout = ProcessOutput.Readlines(v => println(v)),
+          mergeErrIntoOut = true,
+          timeoutGracePeriod = 10000
+        )
       }
     })
     runThread.start()
@@ -75,7 +81,12 @@ class IntegrationTests extends AnyFunSuite {
 
     val runThread = new Thread(new Runnable() {
       override def run(): Unit = {
-        tester.eval("project-a.liveReloadRun", stdout = ProcessOutput.Readlines(v => println(v)), mergeErrIntoOut = true)
+        tester.eval(
+          "project-a.liveReloadRun",
+          env = Map("PLUGIN_VERSION" -> BuildInfo.version),
+          stdout = ProcessOutput.Readlines(v => println(v)),
+          mergeErrIntoOut = true
+        )
       }
     })
     runThread.start()

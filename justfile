@@ -42,11 +42,16 @@ publish-gradle: publish-local-if-unpublished-sbt is-release
     -Pgradle.publish.key=$GRADLE_PUBLISH_KEY \
     -Pgradle.publish.secret=$GRADLE_SECRET_KEY
 
-test-mill: publish-local-if-unpublished-sbt calculate-version
-  cd mill && {{ mill }} mill-live-reload.publishLocal && {{ mill }} mill-live-reload.integration.testLocal
+test-mill: publish-local-if-unpublished-sbt calculate-version publish-local-mill
+  cd mill && {{ mill }} mill-live-reload.integration.testLocal
+
+publish-local-mill:
+  cd mill && {{ mill }} mill-live-reload.publishLocal
+
+publish-mill: publish-local-if-unpublished-sbt calculate-version
+  cd mill && {{ mill }} mill-live-reload.publishSonatypeCentral
 
 code-format-check-sbt:
-  # https://github.com/sbt/sbt/issues/5969
   {{ sbt }} fmtCheckAll
 
 code-format-apply-sbt:

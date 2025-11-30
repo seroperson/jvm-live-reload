@@ -1,4 +1,4 @@
-//| mill-version: 1.0.6
+//| mill-version: 1.1.0-RC2
 //| mill-jvm-version: system
 //| mvnDeps: ["com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION"]
 
@@ -11,7 +11,7 @@ import mill.scalalib.scalafmt.ScalafmtModule
 import mill.api.Task.Simple
 import mill.api.BuildCtx
 
-object `mill-live-reload` extends ScalaModule, PublishModule, BuildInfo, ScalafmtModule:
+object `mill-live-reload` extends ScalaModule, SonatypeCentralPublishModule, BuildInfo, ScalafmtModule:
 
   def scalaVersion = "3.7.3"
   def platformSuffix = s"_mill$millBinPlatform"
@@ -41,7 +41,8 @@ object `mill-live-reload` extends ScalaModule, PublishModule, BuildInfo, Scalafm
 
     def buildInfoMembers = Seq(
       BuildInfo.Value("resourceDir", super[ScalaTests].resources().iterator.map(_.path).mkString(";")),
-      BuildInfo.Value("exePath", millExecutable.assembly().path.toString)
+      BuildInfo.Value("exePath", millExecutable.assembly().path.toString),
+      BuildInfo.Value("version", readVersionFromRepo())
     )
 
     // Create a Mill executable configured for testing our plugin
@@ -62,7 +63,7 @@ object `mill-live-reload` extends ScalaModule, PublishModule, BuildInfo, Scalafm
   )
 
   // Publishing Config
-  override def publishVersion = "0.0.1"// readVersionFromRepo
+  override def publishVersion = readVersionFromRepo
   override def pomSettings = PomSettings(
     description = "Provides an universal Live Reload experience for web applications built with mill",
     organization = "me.seroperson",
