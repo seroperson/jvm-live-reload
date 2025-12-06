@@ -38,7 +38,7 @@ test-gradle: publish-local-if-unpublished-sbt calculate-version
   cd gradle && {{ gradle }} :plugin:plugin:check
 
 publish-gradle: publish-local-if-unpublished-sbt is-release
-  cd gradle && {{ gradle }} :plugin:plugin:publishPlugins --validate-only \
+  cd gradle && {{ gradle }} :plugin:plugin:publishPlugins \
     -Pgradle.publish.key=$GRADLE_PUBLISH_KEY \
     -Pgradle.publish.secret=$GRADLE_SECRET_KEY
 

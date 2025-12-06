@@ -21,7 +21,8 @@ fun readVersion() =
         "$projectDir/../../../version.txt",
     ).map { file(it) }
         .firstOrNull { it.exists() }
-        ?.readText() ?: "0.0.1-SNAPSHOT"
+        ?.readText()
+        ?.trim() ?: "0.0.1-SNAPSHOT"
 
 group = "me.seroperson"
 

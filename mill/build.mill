@@ -53,7 +53,7 @@ object `mill-live-reload` extends ScalaModule, SonatypeCentralPublishModule, Bui
   }
 
   def readVersionFromRepo = Task.Input {
-    os.read(BuildCtx.workspaceRoot / ".." / "version.txt")
+    os.read(BuildCtx.workspaceRoot / ".." / "version.txt").trim()
   }
 
   def buildInfoPackageName = "me.seroperson.reload.live.mill"

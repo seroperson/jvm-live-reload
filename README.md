@@ -1,8 +1,7 @@
 # ♾️ jvm-live-reload
 
 [![Build Status](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml/badge.svg)](https://github.com/seroperson/jvm-live-reload/actions/workflows/ci.yml)
-[![Maven Central Version](https://img.shields.io/maven-central/v/me.seroperson/sbt-jvm-live-reload_2.12)](https://mvnrepository.com/artifact/me.seroperson/sbt-jvm-live-reload_2.12)
-![Maven Central Last Update](https://img.shields.io/maven-central/last-update/me.seroperson/sbt-jvm-live-reload_2.12)
+[![Sonatype Central Version](https://maven-badges.sml.io/sonatype-central/me.seroperson/sbt-live-reload_sbt2_3/badge.svg)](https://central.sonatype.com/artifact/me.seroperson/sbt-live-reload_sbt2_3)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/seroperson/jvm-live-reload/LICENSE)
 
 <!-- prettier-ignore-start -->

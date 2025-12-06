@@ -53,7 +53,7 @@ addCommandAlias("fmtAll", "javafmtAll;scalafmtAll")
 version := {
   val versionFile = file("version.txt")
   if (versionFile.exists()) {
-    IO.read(versionFile)
+    IO.read(versionFile).trim
   } else {
     version.value
   }
