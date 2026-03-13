@@ -1,6 +1,6 @@
 lazy val scala212 = "2.12.21"
 lazy val scala213 = "2.13.18"
-lazy val scala3 = "3.7.4"
+lazy val scala3 = "3.8.2"
 lazy val supportedScalaVersions = List(scala212, scala213, scala3)
 lazy val supportedScalaSbtVersions = List(scala212, scala3)
 
@@ -72,8 +72,12 @@ LocalRootProject / publish / skip := true
 LocalRootProject / publishLocal / skip := true
 LocalRootProject / publishM2 / skip := true
 
+val sbtLaunchJar = taskKey[File]("Path to sbt-launch.jar for integration tests")
+val SbtLaunchConfig = config("sbtlaunch").hide
+
 lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
   .enablePlugins(SbtPlugin, BuildInfoPlugin)
+  .configs(SbtLaunchConfig)
   .settings(
     name := "sbt-live-reload",
     description := "Provides an universal Live Reload experience for web applications built with sbt",
@@ -82,12 +86,31 @@ lazy val `sbtLiveReload` = (projectMatrix in file("sbt"))
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.12.0"
-        case _      => "2.0.0-RC8"
+        case _      => "2.0.0-RC9"
       }
     },
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "me.seroperson.reload.live.sbt",
-    scriptedLaunchOpts += version.apply { v => s"-Dproject.version=$v" }.value
+    scriptedLaunchOpts += version.apply { v => s"-Dproject.version=$v" }.value,
+    libraryDependencies ++= Seq(
+      "org.scala-sbt" %% "sbt-testing-framework" % "2.0.0-RC9-bin-SNAPSHOT" % Test,
+      "org.scalatest" %% "scalatest" % "3.2.19" % Test,
+      "org.scala-sbt" % "sbt-launch" % "2.0.0-RC9-bin-SNAPSHOT" % SbtLaunchConfig,
+    ),
+    sbtLaunchJar := {
+      val report = (SbtLaunchConfig / update).value
+      report
+        .select(module = moduleFilter(organization = "org.scala-sbt", name = "sbt-launch"))
+        .head
+    },
+    Test / fork := true,
+    Test / javaOptions ++= Seq(
+      s"-Dsbt.launch.jar=${sbtLaunchJar.value}",
+      s"-Dproject.version=${version.value}"
+    ),
+    Test / testOptions := (Test / testOptions)
+      .dependsOn(publishLocal)
+      .value,
   )
   .jvmPlatform(scalaVersions = supportedScalaSbtVersions)
   .dependsOn(`buildLink`, `runner`)
