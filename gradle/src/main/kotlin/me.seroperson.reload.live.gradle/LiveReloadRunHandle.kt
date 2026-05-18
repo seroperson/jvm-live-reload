@@ -68,7 +68,7 @@ open class LiveReloadRunHandle
                         ServerType.HTTP -> "me.seroperson.reload.live.webserver.DevServerStart"
                         ServerType.GRPC -> "me.seroperson.reload.live.webserver.grpc.GrpcDevServerStart"
                     }
-                val startParams =
+                val params =
                     StartParams(
                         // todo: deal with args, properties and java options
                         DevServerSettings(listOf(), listOf(), params.settings),
@@ -84,18 +84,17 @@ open class LiveReloadRunHandle
 
                 val buildLogger = LiveReloadLogger()
                 val devServerRunner = DevServerRunner.getInstance()
-                val server =
+                devServer =
                     devServerRunner.runBackground(
-                        startParams,
+                        params,
                         this::reloadCompile,
                         this::isChanged,
                         // fileWatcherService
                         null,
                         buildLogger,
                     )
-                devServer = server
                 // Visible only when running with `--info`
-                DevServerRunner.printBanner(server, buildLogger)
+                DevServerRunner.printBanner(devServer, buildLogger)
             } finally {
                 lock.writeLock().unlock()
             }
