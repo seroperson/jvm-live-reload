@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 import me.seroperson.reload.live.settings.DevServerSettings;
+import me.seroperson.reload.live.settings.ServerType;
 
 /**
  * Immutable container for development server startup parameters.
@@ -25,6 +26,7 @@ public final class StartParams {
   private final List<String> startupHookClasses;
   private final List<String> shutdownHookClasses;
   private final Map<String, String> propagateEnv;
+  private final ServerType serverType;
 
   /**
    * Constructs a new StartParams instance with all required configuration.
@@ -37,6 +39,8 @@ public final class StartParams {
    * @param internalMainClassName the fully qualified name of the actual application main class
    * @param startupHookClasses the list of fully qualified class names for startup hooks
    * @param shutdownHookClasses the list of fully qualified class names for shutdown hooks
+   * @param propagateEnv the map of environment variables to propagate into the application JVM
+   * @param serverType the kind of proxy that will be started (HTTP or GRPC)
    */
   public StartParams(
       DevServerSettings settings,
@@ -46,7 +50,8 @@ public final class StartParams {
       String internalMainClassName,
       List<String> startupHookClasses,
       List<String> shutdownHookClasses,
-      Map<String, String> propagateEnv) {
+      Map<String, String> propagateEnv,
+      ServerType serverType) {
     this.settings = settings;
     this.dependencyClasspath = dependencyClasspath;
     this.monitoredFiles = monitoredFiles;
@@ -55,6 +60,7 @@ public final class StartParams {
     this.startupHookClasses = startupHookClasses;
     this.shutdownHookClasses = shutdownHookClasses;
     this.propagateEnv = propagateEnv;
+    this.serverType = serverType;
   }
 
   /**
@@ -122,5 +128,14 @@ public final class StartParams {
 
   public Map<String, String> getPropagateEnv() {
     return propagateEnv;
+  }
+
+  /**
+   * Returns the kind of proxy that will be started.
+   *
+   * @return the server type (HTTP or GRPC)
+   */
+  public ServerType getServerType() {
+    return serverType;
   }
 }

@@ -5,6 +5,7 @@ import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
+import me.seroperson.reload.live.settings.ServerType as CoreServerType
 import org.gradle.deployment.internal.Deployment
 import org.gradle.deployment.internal.DeploymentHandle
 import org.slf4j.Logger
@@ -68,6 +69,11 @@ open class LiveReloadRunHandle
                         ServerType.HTTP -> "me.seroperson.reload.live.webserver.DevServerStart"
                         ServerType.GRPC -> "me.seroperson.reload.live.webserver.grpc.GrpcDevServerStart"
                     }
+                val coreServerType =
+                    when (params.serverType) {
+                        ServerType.HTTP -> CoreServerType.HTTP
+                        ServerType.GRPC -> CoreServerType.GRPC
+                    }
                 val params =
                     StartParams(
                         // todo: deal with args, properties and java options
@@ -80,6 +86,7 @@ open class LiveReloadRunHandle
                         params.startupHooks,
                         params.shutdownHooks,
                         params.propagateEnv,
+                        coreServerType,
                     )
 
                 val buildLogger = LiveReloadLogger()

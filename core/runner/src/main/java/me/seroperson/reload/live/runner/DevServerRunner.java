@@ -14,6 +14,7 @@ import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.runner.classloader.NamedURLClassLoader;
 import me.seroperson.reload.live.runner.classloader.SharedClassesClassLoader;
 import me.seroperson.reload.live.settings.DevServerSettings;
+import me.seroperson.reload.live.settings.ServerType;
 import org.jline.terminal.TerminalBuilder;
 import play.dev.filewatch.FileWatchService;
 
@@ -172,22 +173,45 @@ public final class DevServerRunner {
 
     logger.info("");
     logger.info("🎉 Development Live Reload server successfully started!");
-    logger.info(
-        "🚀 Serving at:    "
-            + GREEN
-            + "http://"
-            + settings.getProxyHttpHost()
-            + ":"
-            + settings.getProxyHttpPort()
-            + RESET);
-    logger.info(
-        "   Proxifying to: "
-            + GREEN
-            + "http://"
-            + settings.getHttpHost()
-            + ":"
-            + settings.getHttpPort()
-            + RESET);
+    if (params.getServerType() == ServerType.GRPC) {
+      var proxyCert = settings.getGrpcProxyTlsCert();
+      var proxyKey = settings.getGrpcProxyTlsKey();
+      var proxyTls = proxyCert != null && !proxyCert.isEmpty() && proxyKey != null && !proxyKey.isEmpty();
+      var targetTls = settings.isGrpcTargetTls();
+      logger.info(
+          "🚀 Serving at:    "
+              + GREEN
+              + (proxyTls ? "grpcs://" : "grpc://")
+              + settings.getProxyGrpcHost()
+              + ":"
+              + settings.getProxyGrpcPort()
+              + RESET);
+      logger.info(
+          "   Proxifying to: "
+              + GREEN
+              + (targetTls ? "grpcs://" : "grpc://")
+              + settings.getGrpcHost()
+              + ":"
+              + settings.getGrpcPort()
+              + RESET);
+    } else {
+      logger.info(
+          "🚀 Serving at:    "
+              + GREEN
+              + "http://"
+              + settings.getProxyHttpHost()
+              + ":"
+              + settings.getProxyHttpPort()
+              + RESET);
+      logger.info(
+          "   Proxifying to: "
+              + GREEN
+              + "http://"
+              + settings.getHttpHost()
+              + ":"
+              + settings.getHttpPort()
+              + RESET);
+    }
     logger.info("ℹ️ Perform a first request to start the underlying server");
   }
 

@@ -8,6 +8,7 @@ import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
+import me.seroperson.reload.live.settings.{ServerType => CoreServerType}
 import sbt.*
 import sbt.Keys.*
 import sbt.internal.inc.Analysis
@@ -99,6 +100,10 @@ private[sbt] object Commands {
       )
 
       val logger = new SbtBuildLogger(settings, sbtLog)
+      val serverType = liveServerType.value match {
+        case GrpcServerType => CoreServerType.GRPC
+        case HttpServerType => CoreServerType.HTTP
+      }
       val params = new StartParams(
         settings,
         /* dependencyClasspath */ SbtCompat
@@ -109,7 +114,8 @@ private[sbt] object Commands {
         /* internalMainClassName */ (Compile / mainClass).value.get,
         liveStartupHooks.value.asJava,
         liveShutdownHooks.value.asJava,
-        livePropagateEnv.value.asJava
+        livePropagateEnv.value.asJava,
+        serverType
       )
 
       val devServerRunner = DevServerRunner.getInstance

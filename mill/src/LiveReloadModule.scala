@@ -7,6 +7,7 @@ import me.seroperson.reload.live.runner.CompileResult.CompileSuccess
 import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
+import me.seroperson.reload.live.settings.{ServerType => CoreServerType}
 import mill.*
 import mill.api.Evaluator
 import mill.api.Task.Simple
@@ -135,6 +136,10 @@ trait LiveReloadModule extends JavaModule {
       case GrpcServerType =>
         "me.seroperson.reload.live.webserver.grpc.GrpcDevServerStart"
     }
+    val coreServerType = liveServerType() match {
+      case HttpServerType => CoreServerType.HTTP
+      case GrpcServerType => CoreServerType.GRPC
+    }
 
     val params = new StartParams(
       settings,
@@ -146,7 +151,8 @@ trait LiveReloadModule extends JavaModule {
       /* internalMainClassName */ finalMainClass(),
       liveStartupHooks().asJava,
       liveShutdownHooks().asJava,
-      livePropagateEnv().asJava
+      livePropagateEnv().asJava,
+      coreServerType
     )
 
     val devServerRunner = DevServerRunner.getInstance
