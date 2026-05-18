@@ -14,7 +14,6 @@ import me.seroperson.reload.live.build.ReloadableServer;
 import me.seroperson.reload.live.runner.classloader.NamedURLClassLoader;
 import me.seroperson.reload.live.runner.classloader.SharedClassesClassLoader;
 import me.seroperson.reload.live.settings.DevServerSettings;
-import me.seroperson.reload.live.settings.ServerType;
 import org.jline.terminal.TerminalBuilder;
 import play.dev.filewatch.FileWatchService;
 
@@ -144,7 +143,7 @@ public final class DevServerRunner {
     try (var devServer =
         runBackground(params, reloadCompile, triggerReload, fileWatchService, logger)) {
 
-      printBanner(params, logger);
+      printBanner(devServer, logger);
       logger.info("   Use " + UNDERLINED + "Enter" + RESET + " to stop and exit");
 
       var terminalBuilder = TerminalBuilder.builder().streams(in, out).system(true).dumb(true);
@@ -168,50 +167,11 @@ public final class DevServerRunner {
   private static final String UNDERLINED = "\u001b[4m";
 
   /** Prints beautiful banner with basic plugin settings */
-  public static void printBanner(StartParams params, BuildLogger logger) {
-    var settings = params.getSettings();
-
+  public static void printBanner(ReloadableServer server, BuildLogger logger) {
     logger.info("");
     logger.info("🎉 Development Live Reload server successfully started!");
-    if (params.getServerType() == ServerType.GRPC) {
-      var proxyCert = settings.getGrpcProxyTlsCert();
-      var proxyKey = settings.getGrpcProxyTlsKey();
-      var proxyTls = proxyCert != null && !proxyCert.isEmpty() && proxyKey != null && !proxyKey.isEmpty();
-      var targetTls = settings.isGrpcTargetTls();
-      logger.info(
-          "🚀 Serving at:    "
-              + GREEN
-              + (proxyTls ? "grpcs://" : "grpc://")
-              + settings.getProxyGrpcHost()
-              + ":"
-              + settings.getProxyGrpcPort()
-              + RESET);
-      logger.info(
-          "   Proxifying to: "
-              + GREEN
-              + (targetTls ? "grpcs://" : "grpc://")
-              + settings.getGrpcHost()
-              + ":"
-              + settings.getGrpcPort()
-              + RESET);
-    } else {
-      logger.info(
-          "🚀 Serving at:    "
-              + GREEN
-              + "http://"
-              + settings.getProxyHttpHost()
-              + ":"
-              + settings.getProxyHttpPort()
-              + RESET);
-      logger.info(
-          "   Proxifying to: "
-              + GREEN
-              + "http://"
-              + settings.getHttpHost()
-              + ":"
-              + settings.getHttpPort()
-              + RESET);
-    }
+    logger.info("🚀 Serving at:    " + GREEN + server.getProxyUrl() + RESET);
+    logger.info("   Proxifying to: " + GREEN + server.getApplicationUrl() + RESET);
     logger.info("ℹ️ Perform a first request to start the underlying server");
   }
 

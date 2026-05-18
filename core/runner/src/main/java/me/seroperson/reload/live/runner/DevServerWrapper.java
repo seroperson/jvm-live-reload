@@ -56,6 +56,16 @@ public class DevServerWrapper implements ReloadableServer {
   }
 
   @Override
+  public String getProxyUrl() {
+    return server.getProxyUrl();
+  }
+
+  @Override
+  public String getApplicationUrl() {
+    return server.getApplicationUrl();
+  }
+
+  @Override
   public void close() throws IOException {
     try {
       server.close();

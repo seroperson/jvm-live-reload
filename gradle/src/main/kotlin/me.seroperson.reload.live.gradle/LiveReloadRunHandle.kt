@@ -5,7 +5,6 @@ import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
-import me.seroperson.reload.live.settings.ServerType as CoreServerType
 import org.gradle.deployment.internal.Deployment
 import org.gradle.deployment.internal.DeploymentHandle
 import org.slf4j.Logger
@@ -69,12 +68,7 @@ open class LiveReloadRunHandle
                         ServerType.HTTP -> "me.seroperson.reload.live.webserver.DevServerStart"
                         ServerType.GRPC -> "me.seroperson.reload.live.webserver.grpc.GrpcDevServerStart"
                     }
-                val coreServerType =
-                    when (params.serverType) {
-                        ServerType.HTTP -> CoreServerType.HTTP
-                        ServerType.GRPC -> CoreServerType.GRPC
-                    }
-                val params =
+                val startParams =
                     StartParams(
                         // todo: deal with args, properties and java options
                         DevServerSettings(listOf(), listOf(), params.settings),
@@ -86,22 +80,22 @@ open class LiveReloadRunHandle
                         params.startupHooks,
                         params.shutdownHooks,
                         params.propagateEnv,
-                        coreServerType,
                     )
 
                 val buildLogger = LiveReloadLogger()
                 val devServerRunner = DevServerRunner.getInstance()
-                devServer =
+                val server =
                     devServerRunner.runBackground(
-                        params,
+                        startParams,
                         this::reloadCompile,
                         this::isChanged,
                         // fileWatcherService
                         null,
                         buildLogger,
                     )
+                devServer = server
                 // Visible only when running with `--info`
-                DevServerRunner.printBanner(params, buildLogger)
+                DevServerRunner.printBanner(server, buildLogger)
             } finally {
                 lock.writeLock().unlock()
             }

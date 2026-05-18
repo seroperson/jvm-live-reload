@@ -136,4 +136,23 @@ public class GrpcDevServerStart extends BaseDevServerStart<Server> {
       proxyServer.shutdownNow();
     }
   }
+
+  @Override
+  public String getProxyUrl() {
+    String cert = settings.getGrpcProxyTlsCert();
+    String key = settings.getGrpcProxyTlsKey();
+    boolean tls = cert != null && !cert.isEmpty() && key != null && !key.isEmpty();
+    return (tls ? "grpcs://" : "grpc://")
+        + settings.getProxyGrpcHost()
+        + ":"
+        + settings.getProxyGrpcPort();
+  }
+
+  @Override
+  public String getApplicationUrl() {
+    return (settings.isGrpcTargetTls() ? "grpcs://" : "grpc://")
+        + settings.getGrpcHost()
+        + ":"
+        + settings.getGrpcPort();
+  }
 }

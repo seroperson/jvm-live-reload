@@ -87,6 +87,16 @@ public class DevServerStart extends BaseDevServerStart<Undertow> {
     proxyServer.stop();
   }
 
+  @Override
+  public String getProxyUrl() {
+    return "http://" + settings.getProxyHttpHost() + ":" + settings.getProxyHttpPort();
+  }
+
+  @Override
+  public String getApplicationUrl() {
+    return "http://" + settings.getHttpHost() + ":" + settings.getHttpPort();
+  }
+
   private void createCurrentGenerationWorker() {
     var ioThreads = Math.max(Runtime.getRuntime().availableProcessors(), 2);
     try {
