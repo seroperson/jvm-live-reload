@@ -12,7 +12,6 @@ import io.grpc.TlsChannelCredentials;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import me.seroperson.reload.live.UnrecoverableException;
 import me.seroperson.reload.live.build.BuildLogger;
 
@@ -22,6 +21,11 @@ import me.seroperson.reload.live.build.BuildLogger;
  * <p>This handler maintains a connection to the target GRPC server and provides the ability to
  * close and recreate the channel when the application is reloaded, ensuring that the proxy always
  * connects to the latest version of the application.
+ *
+ * <p>Channel lifecycle is coordinated through {@code channelLock}: the lock is held only across the
+ * brief field swap (and the lazy create in {@link #getChannel()}). The actual {@code
+ * shutdown}/{@code awaitTermination} is performed <em>outside</em> the lock so that a slow shutdown
+ * of the old channel does not stall concurrent reads.
  */
 class ReloadableGrpcProxyHandler {
 
@@ -31,7 +35,12 @@ class ReloadableGrpcProxyHandler {
   private final int targetPort;
   private final boolean useTls;
   private final String trustPath;
-  private final AtomicReference<ManagedChannel> channelRef = new AtomicReference<>();
+
+  // Guards every assignment to `channel` and the lazy-create in getChannel(). Reads on the
+  // fast path are unsynchronized (volatile) for performance; correctness is preserved by
+  // never letting the field be momentarily null between a close and a replace.
+  private final Object channelLock = new Object();
+  private volatile ManagedChannel channel;
 
   /**
    * Creates a new reloadable GRPC proxy handler.
@@ -62,16 +71,32 @@ class ReloadableGrpcProxyHandler {
    * @return the managed channel to the target server
    */
   public Channel getChannel() {
-    ManagedChannel channel = channelRef.get();
-    if (channel == null || channel.isShutdown() || channel.isTerminated()) {
-      channel = createChannel();
-      channelRef.set(channel);
+    // Fast path: volatile read. If the channel is live, return it without locking.
+    ManagedChannel current = channel;
+    if (current != null && !current.isShutdown() && !current.isTerminated()) {
+      return current;
     }
-    return channel;
+    // Slow path: lazily create exactly one channel under the lock. Double-checked so that
+    // concurrent callers don't each build their own ManagedChannel (the previous
+    // AtomicReference + plain set() pattern leaked the loser of that race).
+    synchronized (channelLock) {
+      current = channel;
+      if (current == null || current.isShutdown() || current.isTerminated()) {
+        current = createChannel();
+        channel = current;
+      }
+      return current;
+    }
   }
 
   /**
    * Creates a new client call to the target server.
+   *
+   * <p>There is a small inherent window where the channel can be shut down by a concurrent {@link
+   * #refreshChannel()} between {@link #getChannel()} and the eventual {@code start()} on the
+   * returned call, in which case gRPC will surface {@code Status.UNAVAILABLE: Channel shutdown
+   * invoked}. This is the best we can do without ref-counting in-flight calls; external callers
+   * should rely on gRPC's own retry policy for transient failures around a reload boundary.
    *
    * @param methodDescriptor the method to call
    * @param callOptions the call options
@@ -84,27 +109,54 @@ class ReloadableGrpcProxyHandler {
     return getChannel().newCall(methodDescriptor, callOptions);
   }
 
-  /** Refreshes the channel by closing the existing one and creating a new one. */
+  /** Refreshes the channel by installing a new one and shutting down the previous one. */
   public void refreshChannel() {
-    closeChannel();
-    logger.debug("Refreshing GRPC channel to " + targetHost + ":" + targetPort);
-    channelRef.set(createChannel());
+    ManagedChannel previous;
+    ManagedChannel replacement;
+    synchronized (channelLock) {
+      previous = channel;
+      // Build the replacement and publish it before the previous channel is shut down so
+      // concurrent getChannel() callers waiting on the lock never see a momentary null.
+      logger.debug("Refreshing GRPC channel to " + targetHost + ":" + targetPort);
+      replacement = createChannel();
+      channel = replacement;
+    }
+    // Shutdown is performed outside the lock: awaitTermination can block for up to 5s and
+    // there is no reason to make new readers wait for the old channel to drain.
+    if (previous != null) {
+      shutdownChannel(previous);
+    }
   }
 
   /** Closes the current channel if it exists. */
   public void closeChannel() {
-    ManagedChannel channel = channelRef.getAndSet(null);
-    if (channel != null && !channel.isShutdown()) {
-      logger.debug("Closing GRPC channel");
-      channel.shutdown();
-      try {
-        if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
-          channel.shutdownNow();
-        }
-      } catch (InterruptedException e) {
-        channel.shutdownNow();
-        Thread.currentThread().interrupt();
+    ManagedChannel previous;
+    synchronized (channelLock) {
+      previous = channel;
+      channel = null;
+    }
+    if (previous != null) {
+      shutdownChannel(previous);
+    }
+  }
+
+  /**
+   * Gracefully shuts down a single channel, escalating to {@code shutdownNow()} if it does not
+   * terminate within 5 seconds. Idempotent — safe to call on an already-shutdown channel.
+   */
+  private void shutdownChannel(ManagedChannel ch) {
+    if (ch.isShutdown()) {
+      return;
+    }
+    logger.debug("Closing GRPC channel");
+    ch.shutdown();
+    try {
+      if (!ch.awaitTermination(5, TimeUnit.SECONDS)) {
+        ch.shutdownNow();
       }
+    } catch (InterruptedException e) {
+      ch.shutdownNow();
+      Thread.currentThread().interrupt();
     }
   }
 
