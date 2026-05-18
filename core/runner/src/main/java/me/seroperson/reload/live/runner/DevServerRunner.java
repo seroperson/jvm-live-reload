@@ -63,6 +63,7 @@ public final class DevServerRunner {
     var buildLoader = this.getClass().getClassLoader();
     var rootClassLoader = ClassLoader.getSystemClassLoader().getParent();
 
+    DevServerWrapper wrapper = null;
     try {
       var sharedClasses =
           List.of(
@@ -105,11 +106,18 @@ public final class DevServerRunner {
                   params.getInternalMainClassName(),
                   params.getStartupHookClasses(),
                   params.getShutdownHookClasses());
-      var wrapper = new DevServerWrapper(params, logger, server);
+      wrapper = new DevServerWrapper(params, logger, server);
       wrapper.start();
       return wrapper;
     } catch (Throwable e) {
       logger.error("Error during proxy server initialization", e);
+      if (wrapper != null) {
+        try {
+          wrapper.close();
+        } catch (Throwable closeErr) {
+          e.addSuppressed(closeErr);
+        }
+      }
       throw new RuntimeException(e);
     }
   }

@@ -17,9 +17,10 @@ public class DevServerWrapper implements ReloadableServer {
   private final BuildLogger logger;
   private final ReloadableServer server;
 
-  // Preserving initial environment state
+  // Snapshots of the host build process state, captured before start() mutates it.
+  // Populated before any mutation runs so close() can always roll back, even if a
+  // later step (Environment.putEnv, unregisterShutdownHooks, server.start) throws.
   private Map<String, String> initialEnv;
-  // Preserving build-system shutdown hooks
   private Map<Thread, Thread> buildSystemShutdownHooks;
   private Set<Long> buildSystemHookThreadIds;
 
@@ -31,13 +32,14 @@ public class DevServerWrapper implements ReloadableServer {
 
   @Override
   public void start() {
+    // Capture every snapshot before mutating anything; close() relies on these to roll back.
     this.initialEnv = new HashMap<>(System.getenv());
-    var propagateEnv = params.getPropagateEnv();
-    Environment.putEnv(propagateEnv);
-
     this.buildSystemShutdownHooks = new IdentityHashMap<>(ShutdownHook.getRegistredShutdownHooks());
     this.buildSystemHookThreadIds =
         buildSystemShutdownHooks.keySet().stream().map(Thread::getId).collect(Collectors.toSet());
+
+    Environment.putEnv(params.getPropagateEnv());
+
     logger.debug("Preserving shutdown hooks:");
     ShutdownHook.logShutdownHooks(buildSystemShutdownHooks, logger);
     ShutdownHook.unregisterShutdownHooks(buildSystemHookThreadIds);
@@ -70,8 +72,16 @@ public class DevServerWrapper implements ReloadableServer {
     try {
       server.close();
     } finally {
-      Environment.setEnv(initialEnv);
-      ShutdownHook.setShutdownHooks(new IdentityHashMap<>(buildSystemShutdownHooks));
+      // Null-guard so close() is safe on a never-started or partially-started wrapper.
+      if (initialEnv != null) {
+        Environment.setEnv(initialEnv);
+        initialEnv = null;
+      }
+      if (buildSystemShutdownHooks != null) {
+        ShutdownHook.setShutdownHooks(new IdentityHashMap<>(buildSystemShutdownHooks));
+        buildSystemShutdownHooks = null;
+        buildSystemHookThreadIds = null;
+      }
     }
   }
 }
