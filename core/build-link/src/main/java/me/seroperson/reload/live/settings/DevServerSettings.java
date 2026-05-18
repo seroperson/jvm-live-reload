@@ -36,6 +36,8 @@ public final class DevServerSettings {
   public static final String LiveReloadGrpcProxyTlsCert = "live.reload.grpc.proxy.tls.cert";
   public static final String LiveReloadGrpcProxyTlsKey = "live.reload.grpc.proxy.tls.key";
   public static final String LiveReloadIsDebug = "live.reload.debug";
+  public static final String LiveReloadThreadInterruptTimeout =
+      "live.reload.thread.interrupt.timeout";
 
   private final Map<String, String> javaOptionProperties;
   private final Map<String, String> argsProperties;
@@ -78,6 +80,14 @@ public final class DevServerSettings {
   private final DevParameter<Boolean> debug =
       new DevParameter<>(
           LiveReloadIsDebug, "LIVE_RELOAD_DEBUG", false, String::valueOf, Boolean::parseBoolean);
+
+  private final DevParameter<Long> threadInterruptTimeoutMs =
+      new DevParameter<>(
+          LiveReloadThreadInterruptTimeout,
+          "LIVE_RELOAD_THREAD_INTERRUPT_TIMEOUT",
+          5000L,
+          String::valueOf,
+          Long::parseLong);
 
   private final DevParameter<Integer> proxyGrpcPort =
       new DevParameter<>(
@@ -187,6 +197,7 @@ public final class DevServerSettings {
     grpcProxyTlsCert.putInto(merged);
     grpcProxyTlsKey.putInto(merged);
     debug.putInto(merged);
+    threadInterruptTimeoutMs.putInto(merged);
     return merged;
   }
 
@@ -242,6 +253,19 @@ public final class DevServerSettings {
    */
   public boolean isDebug() {
     return debug.getValueOrDefault(javaOptionProperties, argsProperties, pluginSettings);
+  }
+
+  /**
+   * Maximum time, in milliseconds, that {@code ThreadInterruptShutdownHook} will wait for the
+   * application's main thread to terminate after sending it an interrupt. If the thread is still
+   * alive when the timeout elapses, the hook logs a warning and lets the reload proceed; the
+   * leftover thread keeps running with the previous classloader.
+   *
+   * @return interrupt-join timeout in ms (default: 5000)
+   */
+  public Long getThreadInterruptTimeoutMs() {
+    return threadInterruptTimeoutMs.getValueOrDefault(
+        javaOptionProperties, argsProperties, pluginSettings);
   }
 
   /**
