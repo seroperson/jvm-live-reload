@@ -49,6 +49,7 @@ object LiveKeys {
     val LiveReloadGrpcProxyTlsCert: String = DevServerSettings.LiveReloadGrpcProxyTlsCert
     val LiveReloadGrpcProxyTlsKey: String = DevServerSettings.LiveReloadGrpcProxyTlsKey
     val LiveReloadIsDebug: String = DevServerSettings.LiveReloadIsDebug
+    val LiveReloadThreadInterruptTimeout: String = DevServerSettings.LiveReloadThreadInterruptTimeout
     // format: on
   }
 

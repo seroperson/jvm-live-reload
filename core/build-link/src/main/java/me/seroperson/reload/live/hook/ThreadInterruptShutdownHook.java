@@ -1,5 +1,6 @@
 package me.seroperson.reload.live.hook;
 
+import me.seroperson.reload.live.UnrecoverableException;
 import me.seroperson.reload.live.build.BuildLogger;
 import me.seroperson.reload.live.settings.DevServerSettings;
 
@@ -28,19 +29,13 @@ public class ThreadInterruptShutdownHook implements Hook {
       return;
     }
     if (th.isAlive()) {
-      // The application's main() did not honour the interrupt within the timeout
-      // (blocked on a non-interruptible syscall, a busy-loop with no isInterrupted()
-      // check, a runtime that swallows InterruptedException, etc.). Continue the
-      // reload so the dev server doesn't hang forever; the leftover thread will keep
-      // running with the previous classloader until it terminates on its own.
-      logger.error(
-          "⚠️ Application thread '"
+      // main() ignored the interrupt.
+      throw new UnrecoverableException(
+          "Application thread '"
               + th.getName()
               + "' did not exit within "
               + timeoutMs
-              + "ms after interrupt; continuing reload. The previous generation's"
-              + " classloader will not be eligible for GC until this thread terminates."
-              + " Configure '"
+              + "ms after interrupt. Configure '"
               + DevServerSettings.LiveReloadThreadInterruptTimeout
               + "' to adjust the timeout.");
     }

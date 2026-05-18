@@ -85,7 +85,7 @@ public final class DevServerSettings {
       new DevParameter<>(
           LiveReloadThreadInterruptTimeout,
           "LIVE_RELOAD_THREAD_INTERRUPT_TIMEOUT",
-          5000L,
+          15000L,
           String::valueOf,
           Long::parseLong);
 
@@ -258,10 +258,10 @@ public final class DevServerSettings {
   /**
    * Maximum time, in milliseconds, that {@code ThreadInterruptShutdownHook} will wait for the
    * application's main thread to terminate after sending it an interrupt. If the thread is still
-   * alive when the timeout elapses, the hook logs a warning and lets the reload proceed; the
-   * leftover thread keeps running with the previous classloader.
+   * alive when the timeout elapses, the hook throws an {@code UnrecoverableException} so the proxy
+   * tears the reload down instead of continuing with a stale thread.
    *
-   * @return interrupt-join timeout in ms (default: 5000)
+   * @return interrupt-join timeout in ms (default: 15000)
    */
   public Long getThreadInterruptTimeoutMs() {
     return threadInterruptTimeoutMs.getValueOrDefault(
