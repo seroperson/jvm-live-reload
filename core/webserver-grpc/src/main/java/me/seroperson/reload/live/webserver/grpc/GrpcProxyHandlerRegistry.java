@@ -13,6 +13,8 @@ import io.grpc.Status;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import me.seroperson.reload.live.build.BuildLogger;
 
 /**
@@ -23,8 +25,12 @@ import me.seroperson.reload.live.build.BuildLogger;
  */
 class GrpcProxyHandlerRegistry extends HandlerRegistry {
 
+  private static final ByteArrayMarshaller BYTE_ARRAY_MARSHALLER = new ByteArrayMarshaller();
+
   private final BuildLogger logger;
   private final ReloadableGrpcProxyHandler proxyHandler;
+  private final ConcurrentMap<String, ServerMethodDefinition<?, ?>> methodCache =
+      new ConcurrentHashMap<>();
 
   /**
    * Creates a new proxy handler registry.
@@ -43,16 +49,18 @@ class GrpcProxyHandlerRegistry extends HandlerRegistry {
 
     proxyHandler.reload();
 
-    // Create a generic method descriptor for proxying
-    MethodDescriptor<byte[], byte[]> proxyMethod =
-        MethodDescriptor.<byte[], byte[]>newBuilder()
-            .setType(MethodDescriptor.MethodType.UNKNOWN)
-            .setFullMethodName(methodName)
-            .setRequestMarshaller(new ByteArrayMarshaller())
-            .setResponseMarshaller(new ByteArrayMarshaller())
-            .build();
-
-    return ServerMethodDefinition.create(proxyMethod, createProxyCallHandler(proxyMethod));
+    return methodCache.computeIfAbsent(
+        methodName,
+        name -> {
+          MethodDescriptor<byte[], byte[]> proxyMethod =
+              MethodDescriptor.<byte[], byte[]>newBuilder()
+                  .setType(MethodDescriptor.MethodType.UNKNOWN)
+                  .setFullMethodName(name)
+                  .setRequestMarshaller(BYTE_ARRAY_MARSHALLER)
+                  .setResponseMarshaller(BYTE_ARRAY_MARSHALLER)
+                  .build();
+          return ServerMethodDefinition.create(proxyMethod, createProxyCallHandler(proxyMethod));
+        });
   }
 
   private ServerCallHandler<byte[], byte[]> createProxyCallHandler(
@@ -195,8 +203,8 @@ class GrpcProxyHandlerRegistry extends HandlerRegistry {
 
     @Override
     public byte[] parse(InputStream stream) {
-      try {
-        return ByteStreams.toByteArray(stream);
+      try (InputStream in = stream) {
+        return ByteStreams.toByteArray(in);
       } catch (IOException e) {
         throw new RuntimeException("Failed to read bytes from stream", e);
       }
