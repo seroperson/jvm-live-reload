@@ -1,5 +1,8 @@
 package me.seroperson.reload.live
 
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -81,6 +84,20 @@ trait LiveReloadBase extends AnyFunSuite {
       .build()
     try body(runner, proxyPort)
     finally runner.close()
+  }
+
+  /** Polls until a TCP connect to `port` is refused, ie. nothing is listening
+    */
+  protected def verifyPortClosed(port: Int): Unit = {
+    pollUntil(s"TCP connect to $port should be refused") {
+      val sock = new Socket()
+      try {
+        sock.connect(new InetSocketAddress("localhost", port), 1000)
+        throw new AssertionError(s"Port $port is still accepting connections")
+      } catch {
+        case _: IOException => ()
+      } finally sock.close()
+    }
   }
 
   protected def verifyHttp(

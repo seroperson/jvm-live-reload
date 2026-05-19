@@ -144,26 +144,35 @@ public abstract class BaseDevServerStart<S> implements ReloadableServer {
 
   /** Stops the currently running application instance. */
   protected synchronized void stopInternal() {
+    if (appThread == null && classLoader == null) {
+      return;
+    }
+
     // Perform server-specific cleanup before stopping the application
     cleanupServerForOldGeneration();
 
-    if (appThread != null) {
-      logger.debug("Stopping " + mainClass);
-      runHooks(appThread, classLoader, shutdownHooks);
-      appThread = null;
-    }
+    Thread th = appThread;
+    ClassLoader cl = classLoader;
+    appThread = null;
+    classLoader = null;
 
-    if (classLoader != null) {
-      logger.debug("Cleaning up old ClassLoader");
-      if (classLoader instanceof Closeable) {
-        try {
-          ((Closeable) classLoader).close();
-        } catch (Exception e) {
-          logger.error("Failed to close class loader", e);
-        }
+    try {
+      if (th != null) {
+        logger.debug("Stopping " + mainClass);
+        runHooks(th, cl, shutdownHooks);
       }
-      classLoader = null;
-      System.gc();
+    } finally {
+      if (cl != null) {
+        logger.debug("Cleaning up old ClassLoader");
+        if (cl instanceof Closeable) {
+          try {
+            ((Closeable) cl).close();
+          } catch (Exception e) {
+            logger.error("Failed to close class loader", e);
+          }
+        }
+        System.gc();
+      }
     }
   }
 

@@ -33,9 +33,13 @@ class ReloadHandler implements HttpHandler {
       logger.debug("Request successfully handled in ReloadHandler. Was reloaded: " + wasReloaded);
     } catch (UnrecoverableException e) {
       logger.error("Unrecoverable error during reloading", e);
-      httpServerExchange.setStatusCode(404);
-      httpServerExchange.endExchange();
-      server.close();
+      httpServerExchange.setStatusCode(503);
+      httpServerExchange.getResponseSender().send("dev server stopped");
+      try {
+        server.close();
+      } catch (Exception closeEx) {
+        logger.error("Failed to close dev server after unrecoverable error", closeEx);
+      }
     } catch (Exception e) {
       logger.error("Error during reloading", e);
       httpServerExchange.setStatusCode(500);
