@@ -13,6 +13,7 @@ import io.grpc.Status;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import me.seroperson.reload.live.UnrecoverableException;
 import me.seroperson.reload.live.build.BuildLogger;
 
 /**
@@ -41,7 +42,17 @@ class GrpcProxyHandlerRegistry extends HandlerRegistry {
   public ServerMethodDefinition<?, ?> lookupMethod(String methodName, String authority) {
     logger.debug("Proxying method: " + methodName);
 
-    proxyHandler.reload();
+    try {
+      proxyHandler.reload();
+    } catch (UnrecoverableException e) {
+      logger.error("Unrecoverable error during reloading", e);
+      try {
+        proxyHandler.closeServer();
+      } catch (IOException ioe) {
+        logger.error("Failed to close GRPC server after unrecoverable error", ioe);
+      }
+      throw e;
+    }
 
     // Create a generic method descriptor for proxying
     MethodDescriptor<byte[], byte[]> proxyMethod =

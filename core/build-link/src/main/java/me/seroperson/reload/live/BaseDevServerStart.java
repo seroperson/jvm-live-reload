@@ -39,17 +39,6 @@ public abstract class BaseDevServerStart<S> implements ReloadableServer {
   protected final BuildLink buildLink;
 
   /**
-   * If a reload's {@link #startInternal} fails this many times in a row without a successful start
-   * in between, the dev server gives up and surfaces an {@link UnrecoverableException}, which the
-   * request handlers translate into closing the server cleanly. The threshold is intentionally
-   * generous so that a single transient failure (e.g. port briefly held by a previous JVM) does not
-   * tear the dev server down.
-   */
-  private static final int MAX_CONSECUTIVE_RELOAD_FAILURES = 5;
-
-  private int consecutiveReloadFailures = 0;
-
-  /**
    * Creates a new development server.
    *
    * @param settings the development server settings
@@ -115,42 +104,53 @@ public abstract class BaseDevServerStart<S> implements ReloadableServer {
           "Unable to start underlying application without a running proxy.");
     }
 
-    // Perform server-specific preparation before starting the application
-    prepareServerForNewGeneration();
+    try {
+      // Perform server-specific preparation before starting the application
+      prepareServerForNewGeneration();
 
-    this.classLoader = generation.getReloadedClassLoader();
-    this.appThread =
-        new Thread(
-            appThreadGroup,
-            () -> {
-              logger.info("🚀 Starting " + mainClass);
-              try {
-                Class<?> clazz = classLoader.loadClass(mainClass);
-                var mainMethod = clazz.getMethod("main", String[].class);
-                var currentThread = Thread.currentThread();
-                logger.debug(
-                    "Running with Context ClassLoader: "
-                        + currentThread.getContextClassLoader()
-                        + " in thread "
-                        + currentThread);
-                mainMethod.invoke(null, (Object) new String[0]);
-                logger.debug("After Application.main(String[]) execution");
-              } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e) {
-                logger.error("Failed to invoke main method on " + mainClass, e);
-                stopInternal();
-                throw new RuntimeException(e);
-              } catch (InvocationTargetException e) {
-                // Don't log InterruptedException, as likely they're intended
-                if (!(e.getCause() instanceof InterruptedException)) {
-                  logger.error("Error in application main thread", e);
+      this.classLoader = generation.getReloadedClassLoader();
+      this.appThread =
+          new Thread(
+              appThreadGroup,
+              () -> {
+                logger.info("🚀 Starting " + mainClass);
+                try {
+                  Class<?> clazz = classLoader.loadClass(mainClass);
+                  var mainMethod = clazz.getMethod("main", String[].class);
+                  var currentThread = Thread.currentThread();
+                  logger.debug(
+                      "Running with Context ClassLoader: "
+                          + currentThread.getContextClassLoader()
+                          + " in thread "
+                          + currentThread);
+                  mainMethod.invoke(null, (Object) new String[0]);
+                  logger.debug("After Application.main(String[]) execution");
+                } catch (ClassNotFoundException
+                    | NoSuchMethodException
+                    | IllegalAccessException e) {
+                  logger.error("Failed to invoke main method on " + mainClass, e);
+                  stopInternal();
+                  throw new RuntimeException(e);
+                } catch (InvocationTargetException e) {
+                  // Don't log InterruptedException, as likely they're intended
+                  if (!(e.getCause() instanceof InterruptedException)) {
+                    logger.error("Error in application main thread", e);
+                  }
                 }
-              }
-            },
-            "main");
-    appThread.setContextClassLoader(classLoader);
-    appThread.start();
+              },
+              "main");
+      appThread.setContextClassLoader(classLoader);
+      appThread.start();
 
-    runHooks(appThread, classLoader, startupHooks);
+      runHooks(appThread, classLoader, startupHooks);
+    } catch (RuntimeException | Error t) {
+      try {
+        stopInternal();
+      } catch (Throwable cleanupErr) {
+        t.addSuppressed(cleanupErr);
+      }
+      throw t;
+    }
   }
 
   /** Stops the currently running application instance. */
@@ -216,38 +216,9 @@ public abstract class BaseDevServerStart<S> implements ReloadableServer {
       stopInternal();
       try {
         startInternal(casted);
-        consecutiveReloadFailures = 0;
       } catch (RuntimeException | Error t) {
-        // startInternal() may have partially installed the new generation
-        // (worker created, classLoader assigned, appThread started but main() already
-        // exited). Run stopInternal() again so the next attempt starts from a clean
-        // slate. stopInternal() is null-safe on appThread / classLoader, so calling it
-        // twice in a row is fine.
-        try {
-          stopInternal();
-        } catch (Throwable cleanupErr) {
-          t.addSuppressed(cleanupErr);
-        }
-        consecutiveReloadFailures++;
-        logger.error(
-            "🛑 Reload failed (attempt "
-                + consecutiveReloadFailures
-                + " of "
-                + MAX_CONSECUTIVE_RELOAD_FAILURES
-                + "); will retry on next request",
-            t);
-        // DevServerReloader's last buildLink.reload() advanced past its dirty bits
-        // (changed=false, classLoader=<new>), so without this signal a subsequent
-        // request would see "nothing changed" and silently proxy into a dead app.
-        buildLink.requestReload();
-        if (consecutiveReloadFailures >= MAX_CONSECUTIVE_RELOAD_FAILURES) {
-          throw new UnrecoverableException(
-              "Reload failed "
-                  + consecutiveReloadFailures
-                  + " times in a row; giving up and closing the dev server",
-              t);
-        }
-        throw t;
+        throw new UnrecoverableException(
+            "Reload failed; restart `liveReload` after fixing the cause", t);
       }
       logger.debug("Finished reloading");
       return true;

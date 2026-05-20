@@ -25,16 +25,4 @@ public interface BuildLink extends Closeable {
    *     </ul>
    */
   Object reload();
-
-  /**
-   * Signal that the next {@link #reload()} should produce a fresh classloader even if no source
-   * files changed in the meantime. Used by the runner to retry a failed reload on the next request,
-   * so a transient startup failure does not strand the dev server in a dead state.
-   *
-   * <p>The default implementation is a no-op for backwards compatibility with build-link
-   * implementations that predate this method.
-   */
-  default void requestReload() {
-    // no-op by default
-  }
 }

@@ -186,11 +186,6 @@ final class DevServerReloader implements BuildLink, Closeable {
    *     - {@code null} - If nothing changed.
    */
   @Override
-  public void requestReload() {
-    forceReloadNextTime = true;
-  }
-
-  @Override
   public synchronized Object reload() {
     if (changed
         || (triggerReload != null && triggerReload.get())

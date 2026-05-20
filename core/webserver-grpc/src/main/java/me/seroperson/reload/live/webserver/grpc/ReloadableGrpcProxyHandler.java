@@ -112,6 +112,10 @@ class ReloadableGrpcProxyHandler {
     return server.reload();
   }
 
+  public void closeServer() throws IOException {
+    server.close();
+  }
+
   private ManagedChannel createChannel() {
     logger.debug(
         "Creating new GRPC channel to "
