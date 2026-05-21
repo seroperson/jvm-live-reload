@@ -30,7 +30,7 @@ class ReloadableProxyClient implements ProxyClient {
       AttachmentKey.create(ClientConnection.class);
   private final UndertowClient client;
   private final BuildLogger logger;
-  private XnioWorker currentGenerationWorker;
+  private volatile XnioWorker currentGenerationWorker;
 
   private static final ProxyTarget TARGET = new ProxyTarget() {};
 
