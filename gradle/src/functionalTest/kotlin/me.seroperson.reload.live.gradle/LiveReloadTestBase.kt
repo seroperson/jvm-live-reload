@@ -56,9 +56,10 @@ abstract class LiveReloadTestBase {
     private fun pollUntil(
         label: String,
         isBuildRunning: AtomicBoolean,
+        timeoutMillis: Long = reloadTimeoutMillis,
         attempt: () -> Boolean,
     ): Boolean {
-        val deadline = System.currentTimeMillis() + reloadTimeoutMillis
+        val deadline = System.currentTimeMillis() + timeoutMillis
         while (System.currentTimeMillis() < deadline) {
             if (!isBuildRunning.get()) {
                 return false
@@ -72,7 +73,7 @@ abstract class LiveReloadTestBase {
             }
             Thread.sleep(pollIntervalMillis)
         }
-        println("$label timed out after ${reloadTimeoutMillis}ms")
+        println("$label timed out after ${timeoutMillis}ms")
         return false
     }
 
@@ -81,8 +82,9 @@ abstract class LiveReloadTestBase {
         url: String,
         expectedStatus: Int,
         expectedBody: String,
+        timeoutMillis: Long = reloadTimeoutMillis,
     ): Boolean =
-        pollUntil("HTTP $url", isBuildRunning) {
+        pollUntil("HTTP $url", isBuildRunning, timeoutMillis) {
             val request: Request = Request.Builder().url(url).build()
             val (code, body) =
                 client.newCall(request).execute().use { response ->

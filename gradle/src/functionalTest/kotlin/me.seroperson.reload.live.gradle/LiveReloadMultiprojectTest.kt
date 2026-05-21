@@ -50,13 +50,56 @@ class LiveReloadMultiprojectTest : LiveReloadTestBase() {
             }
         runThread.start()
 
-        val greet = runUntil(isBuildRunning, "http://localhost:9000/greet", 200, "Hello World")
+        val greet =
+            runUntil(isBuildRunning, "$PROXY_URL/greet", 200, "Hello World", timeoutMillis = 120_000)
 
         appCode.writeText(APP_CODE_2)
         textCode.writeText(TEXT_CODE_2)
 
+        val greetReloaded = runUntil(isBuildRunning, "$PROXY_URL/greet_reloaded", 200, "World Hello!")
+
+        runThread.interrupt()
+
+        assertTrue(greet && greetReloaded)
+    }
+
+    @Test
+    fun `reload multiproject ktor when dependency project changes`() {
+        appCode.writeText(APP_CODE_1_DEPENDENCY_ONLY)
+        textCode.writeText(TEXT_CODE_1)
+
+        settingsFile.writeText(SETTINGS_CONTENT)
+        buildAFile.writeText(BUILD_A_DEPENDENCY_ONLY_CONTENT)
+        buildBFile.writeText(BUILD_B_CONTENT)
+
+        val runner = initGradleRunner(":project-a:liveReloadRun", projectDir)
+        val isBuildRunning = AtomicBoolean(true)
+        val runThread =
+            Thread {
+                try {
+                    runner.build()
+                    isBuildRunning.set(false)
+                } catch (_: InterruptedException) {
+                    println("Interrupted")
+                } catch (ex: Exception) {
+                    println("Got exception ${ex.message}")
+                }
+            }
+        runThread.start()
+
+        val greet =
+            runUntil(
+                isBuildRunning,
+                "$DEPENDENCY_ONLY_PROXY_URL/greet",
+                200,
+                "Hello World",
+                timeoutMillis = 120_000,
+            )
+
+        textCode.writeText(TEXT_CODE_2)
+
         val greetReloaded =
-            runUntil(isBuildRunning, "http://localhost:9000/greet_reloaded", 200, "World Hello!")
+            runUntil(isBuildRunning, "$DEPENDENCY_ONLY_PROXY_URL/greet", 200, "World Hello")
 
         runThread.interrupt()
 
@@ -64,6 +107,9 @@ class LiveReloadMultiprojectTest : LiveReloadTestBase() {
     }
 
     companion object {
+        const val PROXY_URL = "http://localhost:19000"
+        const val DEPENDENCY_ONLY_PROXY_URL = "http://localhost:19001"
+
         const val SETTINGS_CONTENT =
             """
 include("project-a", "project-b")
@@ -94,7 +140,36 @@ dependencies {
     implementation(project(":project-b"))
 }
 
-liveReload { settings = mapOf("live.reload.http.port" to "8081") }
+liveReload { settings = mapOf(
+    "live.reload.http.port" to "8081",
+    "live.reload.proxy.http.port" to "19000"
+) }
+
+application { mainClass = "AppKt" }
+"""
+        const val BUILD_A_DEPENDENCY_ONLY_CONTENT =
+            """
+plugins {
+    id("org.jetbrains.kotlin.jvm") version "2.2.0"
+    application
+    id("me.seroperson.reload.live.gradle")
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation("io.ktor:ktor-server-core-jvm:3.3.0")
+    implementation("io.ktor:ktor-server-netty:3.3.0")
+    implementation(project(":project-b"))
+}
+
+liveReload { settings = mapOf(
+    "live.reload.http.port" to "18081",
+    "live.reload.proxy.http.port" to "19001"
+) }
 
 application { mainClass = "AppKt" }
 """
@@ -120,6 +195,27 @@ import io.ktor.server.routing.*
 
 fun main() {
     embeddedServer(Netty, port = 8081) {
+        routing {
+            get("/greet") {
+                call.respondText(Text.response)
+            }
+            get("/health") {
+                call.respond(HttpStatusCode.OK, null)
+            }
+        }
+    }.start(wait = true)
+}
+"""
+        const val APP_CODE_1_DEPENDENCY_ONLY =
+            """
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.*
+
+fun main() {
+    embeddedServer(Netty, port = 18081) {
         routing {
             get("/greet") {
                 call.respondText(Text.response)

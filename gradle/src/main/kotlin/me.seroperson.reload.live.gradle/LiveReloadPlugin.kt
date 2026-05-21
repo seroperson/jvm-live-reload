@@ -4,6 +4,7 @@ import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.SourceDirectorySet
 import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
@@ -69,7 +70,24 @@ class LiveReloadPlugin : Plugin<Project> {
                     t.group = APPLICATION_GROUP
                     t.dependsOn(project.tasks.findByName(CLASSES_TASK_NAME)!!)
                     t.outputs.upToDateWhen(Spec { task: Task -> (task as LiveReloadRun).isUpToDate })
+                    val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
+                    val runtimeProjectClasspath =
+                        runtime.incoming
+                            .artifactView {
+                                componentFilter { componentIdentifier ->
+                                    componentIdentifier is ProjectComponentIdentifier
+                                }
+                            }.files
+                    val runtimeDependencyClasspath =
+                        runtime.incoming
+                            .artifactView {
+                                componentFilter { componentIdentifier ->
+                                    componentIdentifier !is ProjectComponentIdentifier
+                                }
+                            }.files
                     t.classes.from(findClasspathDirectories(project))
+                    t.classes.from(runtimeProjectClasspath)
+                    t.classes.from(runtimeDependencyClasspath.filter { it.isDirectory })
                     t.settings.convention(extension.settings)
                     t.mainClass.convention(javaApplicationExtension(project).mainClass)
                     t.startupHooks.convention(extension.startupHooks)
@@ -77,8 +95,7 @@ class LiveReloadPlugin : Plugin<Project> {
                     t.propagateEnv.convention(extension.propagateEnv)
                     t.serverType.convention(extension.serverType)
 
-                    val runtime = project.configurations.getByName(RUNTIME_CLASSPATH_CONFIGURATION_NAME)
-                    t.runtimeClasspath.from(runtime.incoming.files)
+                    t.runtimeClasspath.from(runtimeDependencyClasspath.filter { it.isFile })
                 }
             },
         )
