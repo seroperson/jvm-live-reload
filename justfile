@@ -41,7 +41,7 @@ publish-sbt:
   {{ sbt }} ci-release
 
 test-gradle:
-  {{ gradle }} :gradle:check
+  {{ gradle }} :core:build-link:check :gradle:check
 
 publish-gradle: is-release
   {{ gradle }} :gradle:publishPlugins \
