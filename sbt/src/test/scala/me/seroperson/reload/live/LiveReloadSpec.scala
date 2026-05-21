@@ -124,4 +124,23 @@ class LiveReloadSpec extends LiveReloadBase {
       verifyHttp("greet", 404, port = proxyPort)
     }
   }
+
+  testEach(
+    "http4s - throwing startup hook triggers unrecoverable shutdown",
+    Seq("2.0.0-RC10")
+  ) { sbtVersion =>
+    withRunner("http4s", sbtVersion) { (runner, proxyPort) =>
+      runner.run("bgRun")
+      verifyHttp("greet", 200, Some("Hello World"), proxyPort)
+      // New generation drops the /health route, so RestApiHealthCheckStartupHook
+      // sees a 404 and raises UnrecoverableException. reload() surfaces that
+      // and ReloadHandler closes the dev server.
+      runner.copyFile(
+        "changes/AppBrokenHealth.scala.1",
+        "src/main/scala/App.scala"
+      )
+      verifyHttp("greet", 503, Some("dev server stopped"), proxyPort)
+      verifyPortClosed(proxyPort)
+    }
+  }
 }

@@ -1,0 +1,36 @@
+import cats.effect.{IO, IOApp, Async, Sync}
+import cats.syntax.all._
+import com.comcast.ip4s._
+import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.implicits._
+import org.http4s._
+import org.http4s.dsl.io._
+import org.http4s.dsl.Http4sDsl
+
+// Reload-failure scenario: the new generation compiles and the app process
+// stays up, but the /health endpoint returns 404. RestApiHealthCheckStartupHook
+// raises UnrecoverableException on a 404, which causes BaseDevServerStart.reload()
+// to surface the failure and ReloadHandler to close the dev server.
+object App extends IOApp.Simple {
+
+  def routes[F[_]: Sync]: HttpRoutes[F] = {
+    val dsl = new Http4sDsl[F]{}
+    import dsl._
+    HttpRoutes.of[F] {
+      case GET -> Root / "greet" =>
+        Ok("Hello World")
+    }
+  }
+
+  def runServer[F[_]: Async]: F[Nothing] = {
+    for {
+      _ <-
+        EmberServerBuilder.default[F]
+          .withPort(Port.fromInt(me.seroperson.BuildInfo.port).get)
+          .withHttpApp(routes[F].orNotFound)
+          .build
+    } yield ()
+  }.useForever
+
+  val run = runServer[IO]
+}
