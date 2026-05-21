@@ -214,7 +214,15 @@ final class DevServerReloader implements BuildLink, Closeable {
 
   @Override
   public void close() {
+    var cl = currentApplicationClassLoader;
     currentApplicationClassLoader = null;
+    if (cl != null) {
+      try {
+        cl.close();
+      } catch (IOException e) {
+        // best-effort cleanup on shutdown
+      }
+    }
     if (watcher != null) watcher.stop();
   }
 }
