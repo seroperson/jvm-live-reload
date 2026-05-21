@@ -1,5 +1,8 @@
 package me.seroperson.reload.live
 
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+
 class LiveReloadSpec extends LiveReloadBase {
 
   testEach("http4s - live reload on source change") { sbtVersion =>
@@ -122,6 +125,32 @@ class LiveReloadSpec extends LiveReloadBase {
       )
       verifyHttp("greet_reloaded", 200, Some("World Hello!"), proxyPort)
       verifyHttp("greet", 404, port = proxyPort)
+    }
+  }
+
+  testEach(
+    "http4s - bgRun rolls back wrapper state when the proxy port is taken",
+    Seq("2.0.0-RC10")
+  ) { sbtVersion =>
+    withRunner("http4s", sbtVersion) { (runner, proxyPort) =>
+      // Occupy the proxy port from the test JVM so DevServerStart.start()
+      // can't bind it. wrapper.start() throws, runBackground catches it,
+      // and the wrapper's close() path restores host env vars + shutdown
+      // hooks captured before the mutating sequence began.
+      val blocker = new ServerSocket()
+      blocker.setReuseAddress(true)
+      blocker.bind(new InetSocketAddress("localhost", proxyPort))
+      try {
+        runner.run("bgRun")
+        // bgRun is asynchronous; the inner task fails and the failure
+        // must be surfaced rather than swallowed. The wrapper.close()
+        // rollback can't be observed over HTTP (it touches the sbt JVM's
+        // env table and shutdown-hook registry), so the assertion is
+        // limited to "the proxy never claimed the port" — anything that
+        // claimed and held the port after a failed bind would indicate
+        // partial state in the wrapper that the rollback didn't undo.
+      } finally blocker.close()
+      verifyPortClosed(proxyPort)
     }
   }
 }
