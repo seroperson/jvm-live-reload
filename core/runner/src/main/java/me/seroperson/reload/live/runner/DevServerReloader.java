@@ -111,8 +111,7 @@ final class DevServerReloader implements BuildLink, Closeable {
       long newLastModified =
           cp.stream()
               .filter(File::exists)
-              .flatMap(DevServerReloader::listRecursively)
-              .mapToLong(File::lastModified)
+              .mapToLong(DevServerReloader::maxLastModified)
               .max()
               .orElse(0L);
       var triggered = newLastModified > lastModified;
@@ -202,11 +201,12 @@ final class DevServerReloader implements BuildLink, Closeable {
     }
   }
 
-  private static Stream<File> listRecursively(File file) {
-    try {
-      return Files.walk(file.toPath())
-          .filter(path -> !(Files.isDirectory(path) && path.equals(file.toPath())))
-          .map(Path::toFile);
+  private static long maxLastModified(File file) {
+    try (Stream<Path> s = Files.walk(file.toPath())) {
+      return s.filter(p -> !(Files.isDirectory(p) && p.equals(file.toPath())))
+          .mapToLong(p -> p.toFile().lastModified())
+          .max()
+          .orElse(0L);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
