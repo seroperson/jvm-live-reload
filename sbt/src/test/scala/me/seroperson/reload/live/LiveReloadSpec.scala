@@ -1,5 +1,8 @@
 package me.seroperson.reload.live
 
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+
 class LiveReloadSpec extends LiveReloadBase {
 
   testEach("http4s-slow-start - concurrent first requests wait for startup") {
@@ -159,6 +162,40 @@ class LiveReloadSpec extends LiveReloadBase {
       )
       verifyHttp("greet", 503, Some("dev server stopped"), proxyPort)
       verifyPortClosed(proxyPort)
+    }
+  }
+
+  testEach(
+    "http4s - propagated env is rolled back when proxy fails to bind",
+    Seq("2.0.0-RC10")
+  ) { sbtVersion =>
+    withRunner("http4s-propagate-env-rollback", sbtVersion) {
+      (runner, proxyPort) =>
+        // Hold the proxy port from the test JVM so the sbt JVM's
+        // proxy server.start() throws BindException. runBackground's
+        // catch must call wrapper.close() to restore the env table
+        // and shutdown hooks in the sbt JVM.
+        val blocker = new ServerSocket()
+        blocker.setReuseAddress(true)
+        try {
+          blocker.bind(new InetSocketAddress("localhost", proxyPort))
+          val result = runner.run("bgRun")
+          val logs = result.logs.mkString("\n")
+          // The error log proves the catch fired.
+          assert(
+            result.logsContain("Error during proxy server initialization"),
+            s"expected runBackground catch to fire, got logs:\n$logs"
+          )
+          // The restored-state log is emitted only after wrapper.close()
+          // returns without throwing, so its presence proves the
+          // rollback ran end-to-end.
+          assert(
+            result.logsContain(
+              "Restored build process state after failed start()"
+            ),
+            s"expected rollback to complete, got logs:\n$logs"
+          )
+        } finally blocker.close()
     }
   }
 }

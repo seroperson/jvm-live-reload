@@ -31,13 +31,15 @@ public class DevServerWrapper implements ReloadableServer {
 
   @Override
   public void start() {
+    // Capture every snapshot before mutating anything, so close() can roll back
+    // even if a later step (putEnv, unregisterShutdownHooks, server.start) throws.
     this.initialEnv = new HashMap<>(System.getenv());
-    var propagateEnv = params.getPropagateEnv();
-    Environment.putEnv(propagateEnv);
-
     this.buildSystemShutdownHooks = new IdentityHashMap<>(ShutdownHook.getRegistredShutdownHooks());
     this.buildSystemHookThreadIds =
         buildSystemShutdownHooks.keySet().stream().map(Thread::getId).collect(Collectors.toSet());
+
+    Environment.putEnv(params.getPropagateEnv());
+
     logger.debug("Preserving shutdown hooks:");
     ShutdownHook.logShutdownHooks(buildSystemShutdownHooks, logger);
     ShutdownHook.unregisterShutdownHooks(buildSystemHookThreadIds);
@@ -70,8 +72,12 @@ public class DevServerWrapper implements ReloadableServer {
     try {
       server.close();
     } finally {
-      Environment.setEnv(initialEnv);
-      ShutdownHook.setShutdownHooks(new IdentityHashMap<>(buildSystemShutdownHooks));
+      if (initialEnv != null) {
+        Environment.setEnv(initialEnv);
+      }
+      if (buildSystemShutdownHooks != null) {
+        ShutdownHook.setShutdownHooks(new IdentityHashMap<>(buildSystemShutdownHooks));
+      }
     }
   }
 }
