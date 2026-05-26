@@ -38,6 +38,7 @@ public final class DevServerSettings {
   public static final String LiveReloadIsDebug = "live.reload.debug";
   public static final String LiveReloadThreadInterruptTimeout =
       "live.reload.thread.interrupt.timeout";
+  public static final String LiveReloadStartupTimeout = "live.reload.startup.timeout";
 
   private final Map<String, String> javaOptionProperties;
   private final Map<String, String> argsProperties;
@@ -86,6 +87,14 @@ public final class DevServerSettings {
           LiveReloadThreadInterruptTimeout,
           "LIVE_RELOAD_THREAD_INTERRUPT_TIMEOUT",
           15000L,
+          String::valueOf,
+          Long::parseLong);
+
+  private final DevParameter<Long> startupTimeoutMs =
+      new DevParameter<>(
+          LiveReloadStartupTimeout,
+          "LIVE_RELOAD_STARTUP_TIMEOUT",
+          60000L,
           String::valueOf,
           Long::parseLong);
 
@@ -198,6 +207,7 @@ public final class DevServerSettings {
     grpcProxyTlsKey.putInto(merged);
     debug.putInto(merged);
     threadInterruptTimeoutMs.putInto(merged);
+    startupTimeoutMs.putInto(merged);
     return merged;
   }
 
@@ -265,6 +275,21 @@ public final class DevServerSettings {
    */
   public Long getThreadInterruptTimeoutMs() {
     return threadInterruptTimeoutMs.getValueOrDefault(
+        javaOptionProperties, argsProperties, pluginSettings);
+  }
+
+  /**
+   * Maximum time, in milliseconds, that a health-check startup hook will wait for the application to
+   * report ready before giving up. If the application stays alive but never becomes healthy (e.g.
+   * keeps returning {@code 503} or refusing connections), the hook throws an {@code
+   * UnrecoverableException} when this deadline elapses so the proxy tears the reload down instead of
+   * polling forever and wedging the dev server. A value of {@code 0} disables the timeout (unbounded
+   * wait).
+   *
+   * @return startup readiness timeout in ms (default: 60000, 0 = unbounded)
+   */
+  public Long getStartupTimeoutMs() {
+    return startupTimeoutMs.getValueOrDefault(
         javaOptionProperties, argsProperties, pluginSettings);
   }
 

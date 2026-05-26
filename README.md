@@ -380,6 +380,7 @@ First, let's check the list of available options:
 | `live.reload.grpc.proxy.tls.key`    | `LIVE_RELOAD_GRPC_PROXY_TLS_KEY`    | `""`        | Path to a PEM-encoded private key used by the proxy listener (when both this and the cert are set, the proxy listens with TLS instead of plaintext) |
 | `live.reload.debug`                 | `LIVE_RELOAD_DEBUG`                 | `false`     | Whether to enable/disable debug output                                                                                                              |
 | `live.reload.thread.interrupt.timeout` | `LIVE_RELOAD_THREAD_INTERRUPT_TIMEOUT` | `15000`  | How long (ms) `ThreadInterruptShutdownHook` waits for the application's main thread to exit after `Thread.interrupt()`. If it doesn't, the reload aborts with an unrecoverable error rather than continuing with a stale thread. |
+| `live.reload.startup.timeout`       | `LIVE_RELOAD_STARTUP_TIMEOUT`       | `60000`     | How long (ms) a health-check startup hook waits for the application to report ready. If it stays alive but never becomes healthy (e.g. keeps returning `503` or refusing connections), the reload aborts with an unrecoverable error instead of polling forever and wedging the dev server. Set to `0` to wait indefinitely. |
 
 To change variables using build configuration, use the following key for `sbt`:
 
