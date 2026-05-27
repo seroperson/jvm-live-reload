@@ -39,6 +39,7 @@ public final class DevServerSettings {
   public static final String LiveReloadThreadInterruptTimeout =
       "live.reload.thread.interrupt.timeout";
   public static final String LiveReloadStartupTimeout = "live.reload.startup.timeout";
+  public static final String LiveReloadShutdownTimeout = "live.reload.shutdown.timeout";
 
   private final Map<String, String> javaOptionProperties;
   private final Map<String, String> argsProperties;
@@ -94,6 +95,14 @@ public final class DevServerSettings {
       new DevParameter<>(
           LiveReloadStartupTimeout,
           "LIVE_RELOAD_STARTUP_TIMEOUT",
+          60000L,
+          String::valueOf,
+          Long::parseLong);
+
+  private final DevParameter<Long> shutdownTimeoutMs =
+      new DevParameter<>(
+          LiveReloadShutdownTimeout,
+          "LIVE_RELOAD_SHUTDOWN_TIMEOUT",
           60000L,
           String::valueOf,
           Long::parseLong);
@@ -208,6 +217,7 @@ public final class DevServerSettings {
     debug.putInto(merged);
     threadInterruptTimeoutMs.putInto(merged);
     startupTimeoutMs.putInto(merged);
+    shutdownTimeoutMs.putInto(merged);
     return merged;
   }
 
@@ -279,17 +289,32 @@ public final class DevServerSettings {
   }
 
   /**
-   * Maximum time, in milliseconds, that a health-check startup hook will wait for the application to
-   * report ready before giving up. If the application stays alive but never becomes healthy (e.g.
-   * keeps returning {@code 503} or refusing connections), the hook throws an {@code
-   * UnrecoverableException} when this deadline elapses so the proxy tears the reload down instead of
-   * polling forever and wedging the dev server. A value of {@code 0} disables the timeout (unbounded
-   * wait).
+   * Maximum time, in milliseconds, that a health-check startup hook will wait for the application
+   * to report ready before giving up. If the application stays alive but never becomes healthy
+   * (e.g. keeps returning {@code 503} or refusing connections), the hook throws an {@code
+   * UnrecoverableException} when this deadline elapses so the proxy tears the reload down instead
+   * of polling forever and wedging the dev server. A value of {@code 0} disables the timeout
+   * (unbounded wait).
    *
    * @return startup readiness timeout in ms (default: 60000, 0 = unbounded)
    */
   public Long getStartupTimeoutMs() {
-    return startupTimeoutMs.getValueOrDefault(
+    return startupTimeoutMs.getValueOrDefault(javaOptionProperties, argsProperties, pluginSettings);
+  }
+
+  /**
+   * Maximum time, in milliseconds, that a health-check shutdown hook will wait for the old
+   * generation to stop answering before giving up. If the application keeps serving past this
+   * deadline (e.g. a framework worker pool still answers after {@code main} exits), the hook logs a
+   * warning and returns best-effort so teardown can complete instead of polling forever and wedging
+   * the dev server. Unlike {@link #getStartupTimeoutMs()} it never throws on expiry, because a
+   * shutdown hook that throws would skip the remaining teardown steps (closing the build link,
+   * clearing the running flag). A value of {@code 0} disables the timeout (unbounded wait).
+   *
+   * @return shutdown drain timeout in ms (default: 60000, 0 = unbounded)
+   */
+  public Long getShutdownTimeoutMs() {
+    return shutdownTimeoutMs.getValueOrDefault(
         javaOptionProperties, argsProperties, pluginSettings);
   }
 
