@@ -85,7 +85,8 @@ public final class DevServerRunner {
               reloadCompile,
               triggerReload,
               params.getMonitoredFiles(),
-              fileWatchService);
+              fileWatchService,
+              params.getSettings());
 
       var mainClass = dependenciesClassLoader.loadClass(params.getMainClassName());
       var constructor =

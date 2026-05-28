@@ -38,6 +38,8 @@ public final class DevServerSettings {
   public static final String LiveReloadIsDebug = "live.reload.debug";
   public static final String LiveReloadThreadInterruptTimeout =
       "live.reload.thread.interrupt.timeout";
+  public static final String LiveReloadCompileOnChange = "live.reload.compile.on.change";
+  public static final String LiveReloadCompileDebounceMs = "live.reload.compile.debounce.ms";
 
   private final Map<String, String> javaOptionProperties;
   private final Map<String, String> argsProperties;
@@ -86,6 +88,22 @@ public final class DevServerSettings {
           LiveReloadThreadInterruptTimeout,
           "LIVE_RELOAD_THREAD_INTERRUPT_TIMEOUT",
           15000L,
+          String::valueOf,
+          Long::parseLong);
+
+  private final DevParameter<Boolean> compileOnChange =
+      new DevParameter<>(
+          LiveReloadCompileOnChange,
+          "LIVE_RELOAD_COMPILE_ON_CHANGE",
+          true,
+          String::valueOf,
+          Boolean::parseBoolean);
+
+  private final DevParameter<Long> compileDebounceMs =
+      new DevParameter<>(
+          LiveReloadCompileDebounceMs,
+          "LIVE_RELOAD_COMPILE_DEBOUNCE_MS",
+          300L,
           String::valueOf,
           Long::parseLong);
 
@@ -198,6 +216,8 @@ public final class DevServerSettings {
     grpcProxyTlsKey.putInto(merged);
     debug.putInto(merged);
     threadInterruptTimeoutMs.putInto(merged);
+    compileOnChange.putInto(merged);
+    compileDebounceMs.putInto(merged);
     return merged;
   }
 
@@ -266,6 +286,25 @@ public final class DevServerSettings {
   public Long getThreadInterruptTimeoutMs() {
     return threadInterruptTimeoutMs.getValueOrDefault(
         javaOptionProperties, argsProperties, pluginSettings);
+  }
+
+  /**
+   * Whether to compile in the background when source files change, before the next reload request.
+   *
+   * @return true to prefetch compilation on change (default: true)
+   */
+  public boolean isCompileOnChange() {
+    return compileOnChange.getValueOrDefault(javaOptionProperties, argsProperties, pluginSettings);
+  }
+
+  /**
+   * Debounce interval in milliseconds before starting a background compile after the last file
+   * change.
+   *
+   * @return debounce delay in ms (default: 300)
+   */
+  public long getCompileDebounceMs() {
+    return compileDebounceMs.getValueOrDefault(javaOptionProperties, argsProperties, pluginSettings);
   }
 
   /**
