@@ -25,11 +25,23 @@ public abstract class HealthCheckStartupHook implements HealthCheckHook {
 
   @Override
   public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
+    var path = settings.getHealthCheckPath();
+    long timeout = settings.getStartupTimeoutMs();
+    long deadline = System.currentTimeMillis() + timeout;
     try {
       while (true) {
         AppFailureRegistry.throwIfFailed(th);
+        if (timeout > 0 && System.currentTimeMillis() >= deadline) {
+          throw new UnrecoverableException(
+              "Health-check at "
+                  + path
+                  + " did not become ready within "
+                  + timeout
+                  + "ms. Configure '"
+                  + DevServerSettings.LiveReloadStartupTimeout
+                  + "' to adjust the timeout (0 disables it).");
+        }
         logger.debug("Waiting for the health-check to return success ...");
-        var path = settings.getHealthCheckPath();
         var healthResponse =
             isHealthy(logger, path, settings.getHttpHost(), settings.getHttpPort());
         if (healthResponse == 1) {

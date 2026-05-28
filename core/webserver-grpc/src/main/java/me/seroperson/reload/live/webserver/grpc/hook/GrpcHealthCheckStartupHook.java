@@ -26,9 +26,21 @@ public class GrpcHealthCheckStartupHook implements GrpcHealthCheckHook {
 
   @Override
   public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
+    long timeout = settings.getStartupTimeoutMs();
+    long deadline = System.currentTimeMillis() + timeout;
     try {
       while (true) {
         AppFailureRegistry.throwIfFailed(th);
+        if (timeout > 0 && System.currentTimeMillis() >= deadline) {
+          throw new UnrecoverableException(
+              "GRPC health-check service '"
+                  + settings.getGrpcHealthService()
+                  + "' did not report SERVING within "
+                  + timeout
+                  + "ms. Configure '"
+                  + DevServerSettings.LiveReloadStartupTimeout
+                  + "' to adjust the timeout (0 disables it).");
+        }
         logger.debug("Waiting for the GRPC health-check to return SERVING ...");
         var response = isHealthy(logger, settings);
         if (response == 1) {
