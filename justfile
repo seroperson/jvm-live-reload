@@ -52,7 +52,7 @@ test-mill: publish-local-mill
   {{ mill }} mill-live-reload.integration.testLocal
 
 publish-local-mill: calculate-version
-  {{ mill }} mill-live-reload.publishLocal
+  {{ mill }} mill-live-reload.publishLocal --transitive true
 
 publish-mill: calculate-version
   {{ mill }} mill-live-reload.publishSonatypeCentral

@@ -456,4 +456,28 @@ class IntegrationTests extends AnyFunSuite with RequestMaker {
     assert(initial && reloaded)
   }
 
+  // Regression for: publishLocal only published mill-live-reload itself, omitting
+  // transitive internal modules (runner, webserver, build-link). An external project
+  // using a snapshot version would fail to resolve those deps at meta-build time.
+  test("publishLocal-transitive-resolution") {
+    val resourceDir = os.Path(BuildInfo.resourceDir) / "http4s-with-resources"
+
+    val tester = new IntegrationTester(
+      daemonMode = false,
+      workspaceSourcePath = resourceDir,
+      millExecutable = os.Path(BuildInfo.exePath)
+    )
+
+    val result = tester.eval(
+      "app.compile",
+      env = Map("PLUGIN_VERSION" -> BuildInfo.version),
+      stdout = ProcessOutput.Readlines(v => println(v)),
+      mergeErrIntoOut = true
+    )
+
+    tester.close()
+
+    assert(result.isSuccess)
+  }
+
 }
