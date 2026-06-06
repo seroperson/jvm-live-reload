@@ -3,6 +3,7 @@ package cats.effect
 import cats.effect.unsafe.IORuntime
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
+import me.seroperson.reload.live.UnrecoverableException
 import me.seroperson.reload.live.build.BuildLogger
 import me.seroperson.reload.live.hook.Hook
 import me.seroperson.reload.live.reflect.MiscUtils
@@ -32,9 +33,22 @@ class IoAppEffectShutdownHook extends Hook {
       settings: DevServerSettings,
       logger: BuildLogger
   ): Unit = {
+    val timeoutMs: Long = settings.getThreadInterruptTimeoutMs()
+
     val appThreadGroup = th.getThreadGroup
     th.interrupt()
-    th.join()
+    logger.debug(s"Waiting up to ${timeoutMs}ms for cats-effect thread to finish")
+    th.join(timeoutMs)
+    if (th.isAlive) {
+      // main() ignored the interrupt (e.g. an uncancelable region or a
+      // non-interruptible IO.blocking call). Abort the reload instead of
+      // joining forever and wedging the dev server.
+      throw new UnrecoverableException(
+        s"Cats Effect application thread '${th.getName}' did not exit within " +
+          s"${timeoutMs}ms after interrupt. Configure " +
+          s"'${DevServerSettings.LiveReloadThreadInterruptTimeout}' to adjust the timeout."
+      )
+    }
 
     if (appThreadGroup != null) {
       val threads = new Array[Thread](appThreadGroup.activeCount())
@@ -43,7 +57,14 @@ class IoAppEffectShutdownHook extends Hook {
       cancelHook match {
         case Some(hook) =>
           logger.debug(s"Found cats-effect cancel hook")
-          hook.join()
+          hook.join(timeoutMs)
+          if (hook.isAlive) {
+            throw new UnrecoverableException(
+              s"Cats Effect cancel hook '${hook.getName}' did not finish within " +
+                s"${timeoutMs}ms. Configure " +
+                s"'${DevServerSettings.LiveReloadThreadInterruptTimeout}' to adjust the timeout."
+            )
+          }
         case None =>
           logger.debug(s"cats-effect wasn't found")
       }
