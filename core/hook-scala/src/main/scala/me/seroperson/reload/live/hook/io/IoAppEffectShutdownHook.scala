@@ -37,7 +37,9 @@ class IoAppEffectShutdownHook extends Hook {
 
     val appThreadGroup = th.getThreadGroup
     th.interrupt()
-    logger.debug(s"Waiting up to ${timeoutMs}ms for cats-effect thread to finish")
+    logger.debug(
+     s"Waiting up to ${timeoutMs}ms for cats-effect thread to finish"
+    )
     th.join(timeoutMs)
     if (th.isAlive) {
       throw new UnrecoverableException(
