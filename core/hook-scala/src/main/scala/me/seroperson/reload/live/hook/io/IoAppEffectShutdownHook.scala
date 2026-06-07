@@ -40,9 +40,6 @@ class IoAppEffectShutdownHook extends Hook {
     logger.debug(s"Waiting up to ${timeoutMs}ms for cats-effect thread to finish")
     th.join(timeoutMs)
     if (th.isAlive) {
-      // main() ignored the interrupt (e.g. an uncancelable region or a
-      // non-interruptible IO.blocking call). Abort the reload instead of
-      // joining forever and wedging the dev server.
       throw new UnrecoverableException(
         s"Cats Effect application thread '${th.getName}' did not exit within " +
           s"${timeoutMs}ms after interrupt. Configure " +
