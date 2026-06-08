@@ -33,5 +33,17 @@ livePropagateEnv := Map(
   "JLR_LEAK_CHECK" -> "leaked"
 )
 
+// Dumps the live state of the sbt JVM's own process environment. After a
+// failed bgRun, the test runs this and asserts JLR_LEAK_CHECK is absent,
+// proving the propagated env was actually rolled back (not just that a log
+// line was printed). System.getenv reads the same ProcessEnvironment map
+// that Environment.putEnv/setEnv mutate, so the leak is observable here.
+val dumpLeakCheckEnv =
+  taskKey[Unit]("Logs whether JLR_LEAK_CHECK is present in the sbt JVM environment")
+dumpLeakCheckEnv := {
+  val value = Option(System.getenv("JLR_LEAK_CHECK")).getOrElse("<absent>")
+  streams.value.log.info(s"JLR_LEAK_CHECK_ENV=$value")
+}
+
 buildInfoKeys := Seq[BuildInfoKey](port)
 buildInfoPackage := "me.seroperson"

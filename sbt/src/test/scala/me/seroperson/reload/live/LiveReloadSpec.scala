@@ -181,19 +181,22 @@ class LiveReloadSpec extends LiveReloadBase {
           blocker.bind(new InetSocketAddress("localhost", proxyPort))
           val result = runner.run("bgRun")
           val logs = result.logs.mkString("\n")
-          // The error log proves the catch fired.
+          // The error log proves start() reached server.start() and threw,
+          // i.e. it ran past Environment.putEnv - the env table was actually
+          // mutated, so this is a real leak window, not a no-op.
           assert(
             result.logsContain("Error during proxy server initialization"),
             s"expected runBackground catch to fire, got logs:\n$logs"
           )
-          // The restored-state log is emitted only after wrapper.close()
-          // returns without throwing, so its presence proves the
-          // rollback ran end-to-end.
+          // Directly observe the sbt JVM's own environment after the failed
+          // start. dumpLeakCheckEnv reads System.getenv in the same JVM that
+          // ran bgRun; if the rollback failed, JLR_LEAK_CHECK would still be
+          // "leaked" here. Absence proves wrapper.close() restored the env.
+          val dump = runner.run("dumpLeakCheckEnv")
+          val dumpLogs = dump.logs.mkString("\n")
           assert(
-            result.logsContain(
-              "Restored build process state after failed start()"
-            ),
-            s"expected rollback to complete, got logs:\n$logs"
+            dump.logsContain("JLR_LEAK_CHECK_ENV=<absent>"),
+            s"expected JLR_LEAK_CHECK to be rolled back out of the sbt env, got logs:\n$dumpLogs"
           )
         } finally blocker.close()
     }
