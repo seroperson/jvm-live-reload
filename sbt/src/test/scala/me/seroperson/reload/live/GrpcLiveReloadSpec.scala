@@ -177,6 +177,36 @@ class GrpcLiveReloadSpec extends LiveReloadBase {
     }
   }
 
+  // sbt-protoc is only available for sbt 1.x
+  testEach(
+    "grpc-scalapb - live reload on protobuf source change",
+    versions = Seq("1.12.3")
+  ) { sbtVersion =>
+    withRunner("grpc-scalapb", sbtVersion) { (runner, proxyPort) =>
+      runner.run("bgRun")
+      // response: HelloReply(message = "World Hello!") encoded as field 1
+      verifyGrpc(
+        "Greeter",
+        "SayHello",
+        "0a0c48656c6c6f20576f726c6421",
+        "0a0c576f726c642048656c6c6f21",
+        proxyPort
+      )
+      runner.copyFile(
+        "changes/greeter.proto.1",
+        "src/main/protobuf/greeter.proto"
+      )
+      // response: same Scala field, but regenerated protobuf uses field 2
+      verifyGrpc(
+        "Greeter",
+        "SayHello",
+        "0a0c48656c6c6f20576f726c6421",
+        "120c576f726c642048656c6c6f21",
+        proxyPort
+      )
+    }
+  }
+
   private def listServicesViaReflection(port: Int): Set[String] = {
     val channel =
       ManagedChannelBuilder.forAddress("localhost", port).usePlaintext().build()
