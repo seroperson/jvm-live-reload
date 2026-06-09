@@ -1,5 +1,7 @@
 package me.seroperson.reload.live.mill
 
+import java.io.File
+import java.nio.file.{Path => JPath}
 import java.util.function.Supplier
 import me.seroperson.reload.live.runner.CompileResult
 import me.seroperson.reload.live.runner.CompileResult.CompileFailure
@@ -8,9 +10,8 @@ import me.seroperson.reload.live.runner.DevServerRunner
 import me.seroperson.reload.live.runner.StartParams
 import me.seroperson.reload.live.settings.DevServerSettings
 import mill.*
+import mill.api.BuildCtx
 import mill.api.Evaluator
-import mill.api.Task.Simple
-import mill.api.TaskCtx
 import mill.api.daemon.Result
 import mill.javalib.Dep
 import mill.javalib.JavaModule
@@ -46,6 +47,33 @@ trait LiveReloadModule extends JavaModule {
 
   def livePropagateEnv: Task[Map[String, String]] = Task.Anon {
     Map()
+  }
+
+  private def liveMonitoredFiles: Task[Seq[File]] = {
+    val monitoredInputTasks =
+      transitiveRunModuleDeps.flatMap(module =>
+        Seq(module.sources, module.resources)
+      )
+    val monitoredInputs = Task.sequence(monitoredInputTasks)
+
+    Task.Anon {
+      val outputRoot =
+        (BuildCtx.workspaceRoot / "out").toIO.getCanonicalFile.toPath
+      val monitoredPaths = monitoredInputs().flatten
+        .map(_.path.toIO.getCanonicalFile.toPath)
+        .filterNot(path => path.startsWith(outputRoot))
+        .filter(path => path.toFile.exists())
+        .distinct
+        .sorted
+        .foldLeft(List.empty[JPath]) { (result, next) =>
+          result.headOption match {
+            case Some(previous) if next.startsWith(previous) => result
+            case _                                           => next :: result
+          }
+        }
+
+      monitoredPaths.reverse.map(_.toFile)
+    }
   }
 
   def liveHookBundle: Task[Option[HookBundle]] = Task.Anon {
@@ -141,7 +169,8 @@ trait LiveReloadModule extends JavaModule {
       /* dependencyClasspath */ resolvedRunMvnDeps()
         .map(_.path.toIO)
         .asJava,
-      /* monitoredFiles */ sources().map(_.path.toIO).asJava,
+      /* monitoredFiles */
+      liveMonitoredFiles().asJava,
       /* mainClassName */ mainClassName,
       /* internalMainClassName */ finalMainClass(),
       liveStartupHooks().asJava,

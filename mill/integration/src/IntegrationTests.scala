@@ -145,12 +145,14 @@ class IntegrationTests extends AnyFunSuite with RequestMaker {
 
     val greet = runUntil("http://localhost:9000/greet", 200, "Hello World 1")
     tester.modifyFile(
-      tester.workspacePath / "app" / "src" / "App.scala",
-      _ => os.read(resourceDir / "changes" / "App.scala.1")
-    )
-    tester.modifyFile(
       tester.workspacePath / "app" / "resources" / "application.conf",
       _ => os.read(resourceDir / "changes" / "application.conf.1")
+    )
+    val greetResourceReloaded =
+      runUntil("http://localhost:9000/greet", 200, "Hello World 2")
+    tester.modifyFile(
+      tester.workspacePath / "app" / "src" / "App.scala",
+      _ => os.read(resourceDir / "changes" / "App.scala.1")
     )
     val greetReloaded =
       runUntil("http://localhost:9000/greet_reloaded", 200, "World Hello 2")
@@ -160,7 +162,7 @@ class IntegrationTests extends AnyFunSuite with RequestMaker {
     process.join()
     tester.close()
 
-    assert(greet && greetReloaded)
+    assert(greet && greetResourceReloaded && greetReloaded)
   }
 
   test("grpc-scalapb") {
@@ -302,11 +304,6 @@ class IntegrationTests extends AnyFunSuite with RequestMaker {
       "Multi-Hi".getBytes("UTF-8")
     )
     tester.modifyFile(
-      tester.workspacePath / "project-a" / "src" / "App.scala",
-      _ =>
-        os.read(resourceDir / "changes" / "project-a" / "src" / "App.scala.1")
-    )
-    tester.modifyFile(
       tester.workspacePath / "project-b" / "src" / "Greeting.scala",
       _ =>
         os.read(
@@ -319,7 +316,7 @@ class IntegrationTests extends AnyFunSuite with RequestMaker {
       "greeter.Greeter",
       "Greet",
       Array.emptyByteArray,
-      "Multi-Yo!".getBytes("UTF-8")
+      "Multi-Yo".getBytes("UTF-8")
     )
 
     tester.close()
