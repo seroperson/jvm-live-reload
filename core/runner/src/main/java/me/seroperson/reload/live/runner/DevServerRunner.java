@@ -150,9 +150,23 @@ public final class DevServerRunner {
       try (var terminal = terminalBuilder.build()) {
         var reader = terminal.reader();
         while (devServer.isRunning()) {
+          int input = reader.read(100);
           // 10: Enter
-          if (reader.read(100) == 10) {
+          if (input == 10) {
             break;
+          }
+          if (input == -1) {
+            // EOF: stdin is closed / non-interactive (CI, piped input, nohup,
+            // some IDE run consoles). read(100) returns immediately in this case,
+            // so reading in a tight loop would peg a CPU core at 100%. There is no
+            // console to read Enter from, so block without busy-spinning until the
+            // server stops or this thread is interrupted (e.g. Ctrl-C / SIGTERM).
+            try {
+              Thread.sleep(200L);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              break;
+            }
           }
         }
       }
