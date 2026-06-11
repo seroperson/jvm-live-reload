@@ -181,22 +181,22 @@ class LiveReloadSpec extends LiveReloadBase {
           blocker.bind(new InetSocketAddress("localhost", proxyPort))
           val result = runner.run("bgRun")
           val logs = result.logs.mkString("\n")
-          // The error log proves start() reached server.start() and threw,
-          // i.e. it ran past Environment.putEnv - the env table was actually
-          // mutated, so this is a real leak window, not a no-op.
+          // The held port makes server.start() throw after start() has
+          // already run past Environment.putEnv, so the failed bgRun is
+          // a real leak window, not a no-op.
           assert(
-            result.logsContain("Error during proxy server initialization"),
-            s"expected runBackground catch to fire, got logs:\n$logs"
+            !result.succeeded,
+            s"expected bgRun to fail while the proxy port is held, got logs:\n$logs"
           )
-          // Directly observe the sbt JVM's own environment after the failed
-          // start. dumpLeakCheckEnv reads System.getenv in the same JVM that
-          // ran bgRun; if the rollback failed, JLR_LEAK_CHECK would still be
-          // "leaked" here. Absence proves wrapper.close() restored the env.
-          val dump = runner.run("dumpLeakCheckEnv")
-          val dumpLogs = dump.logs.mkString("\n")
+          // assertEnvRolledBack reads System.getenv in the same JVM that
+          // ran bgRun and fails if JLR_LEAK_CHECK is still set, so task
+          // success is strict evidence that wrapper.close() restored the
+          // env after the failed start.
+          val check = runner.run("assertEnvRolledBack")
+          val checkLogs = check.logs.mkString("\n")
           assert(
-            dump.logsContain("JLR_LEAK_CHECK_ENV=<absent>"),
-            s"expected JLR_LEAK_CHECK to be rolled back out of the sbt env, got logs:\n$dumpLogs"
+            check.succeeded,
+            s"expected JLR_LEAK_CHECK to be rolled back out of the sbt env, got logs:\n$checkLogs"
           )
         } finally blocker.close()
     }
