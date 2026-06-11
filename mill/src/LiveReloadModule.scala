@@ -54,12 +54,6 @@ trait LiveReloadModule extends JavaModule {
     } else {
       val jarNames = runClasspath().map(_.path.toIO.getName)
       def has(prefix: String): Boolean = jarNames.exists(_.startsWith(prefix))
-      // Decide by framework precedence rather than classpath order: markers for
-      // multiple frameworks can legitimately coexist on a single classpath
-      // (zio-interop-cats, or a standalone zio-json/zio-prelude in an http4s
-      // app), so collectFirst over runClasspath() would pick a bundle based on
-      // whichever marker jar happens to come first. Anchor on the unambiguous
-      // web-framework jar first, then fall back to the broad prefixes.
       if (has("zio-http")) Some(ZioAppHookBundle)
       else if (has("http4s")) Some(IoAppHookBundle)
       else if (has("cask")) Some(CaskAppHookBundle)
