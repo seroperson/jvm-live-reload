@@ -169,7 +169,8 @@ private[sbt] object Commands {
 
     Def.task {
       val allDirectories =
-        (unmanagedSourceDirectories ?? Nil).all(filter).value.flatten ++
+        sourceDirectory.all(filter).value ++
+          (unmanagedSourceDirectories ?? Nil).all(filter).value.flatten ++
           (unmanagedResourceDirectories ?? Nil).all(filter).value.flatten
 
       val existingDirectories = allDirectories.filter(_.exists)

@@ -9,6 +9,7 @@ import org.gradle.deployment.internal.Deployment
 import org.gradle.deployment.internal.DeploymentHandle
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.inject.Inject
@@ -21,12 +22,25 @@ open class LiveReloadRunHandle
         private var deployment: Deployment? = null
         private var devServer: ReloadableServer? = null
         private val lock: ReadWriteLock = ReentrantReadWriteLock()
+        private val pendingReload = AtomicBoolean(false)
+
+        /**
+         * Arms a reload for the next request. Called from the task action when its `classes` input
+         * changed. Unlike `Deployment.status().hasChanged()`, which is a one-shot flag that a request can
+         * consume before the rebuild has written new class files to disk, this flag is set after
+         * compilation has finished, so the reload cannot be lost.
+         */
+        fun markChanged() {
+            pendingReload.set(true)
+        }
 
         private val isChanged: Boolean
             get() {
                 lock.readLock().lock()
                 try {
-                    return deployment!!.status().hasChanged()
+                    // status() first - it blocks requests while a rebuild is in progress
+                    val gradleChanged = deployment!!.status().hasChanged()
+                    return pendingReload.getAndSet(false) || gradleChanged
                 } finally {
                     lock.readLock().unlock()
                 }
