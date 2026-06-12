@@ -25,10 +25,11 @@ public class GrpcHealthCheckShutdownHook implements GrpcHealthCheckHook {
 
   @Override
   public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
+    var channel = openChannel(settings);
     try {
       while (true) {
         logger.debug("Waiting for the GRPC health-check to stop returning SERVING ...");
-        var response = isHealthy(logger, settings);
+        var response = checkHealth(channel, logger, settings);
         logger.debug("Response from a health-check: " + response);
         if (response == 1) {
           Thread.sleep(50L);
@@ -43,6 +44,8 @@ public class GrpcHealthCheckShutdownHook implements GrpcHealthCheckHook {
       }
     } catch (InterruptedException e) {
       // Don't print anything, just quit
+    } finally {
+      GrpcHealthCheckHook.closeChannel(channel);
     }
   }
 }
