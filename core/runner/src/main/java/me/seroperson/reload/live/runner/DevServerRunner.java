@@ -159,9 +159,15 @@ public final class DevServerRunner {
       try (var terminal = terminalBuilder.build()) {
         var reader = terminal.reader();
         while (devServer.isRunning()) {
-          // 10: Enter
-          if (reader.read(100) == 10) {
+          int ch = reader.read(100);
+          if (ch == 10) {
+            // Enter pressed — stop the server
             break;
+          }
+          if (ch < 0) {
+            // EOF: stdin is non-interactive (pipe, /dev/null, CI). Avoid a
+            // tight busy-spin by sleeping before the next read attempt.
+            Thread.sleep(500);
           }
         }
       }
