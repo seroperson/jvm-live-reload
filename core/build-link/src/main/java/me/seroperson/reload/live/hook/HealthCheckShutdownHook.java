@@ -26,13 +26,20 @@ public abstract class HealthCheckShutdownHook implements HealthCheckHook {
   @Override
   public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
     try {
+      long deadlineMs = System.currentTimeMillis() + settings.getThreadInterruptTimeoutMs();
       while (true) {
+        if (System.currentTimeMillis() > deadlineMs) {
+          throw new UnrecoverableException(
+              "Shutdown health-check did not report failure within "
+                  + settings.getThreadInterruptTimeoutMs()
+                  + "ms; the old application may still be running.");
+        }
         logger.debug("Waiting for the health-check to return failure ...");
         var path = settings.getHealthCheckPath();
         var healthResponse =
             isHealthy(logger, path, settings.getHttpHost(), settings.getHttpPort());
         if (healthResponse == 1) {
-          // success
+          // success — server still up
           Thread.sleep(50L);
         } else if (healthResponse == 0) {
           // non-success response, but not an exception

@@ -26,7 +26,14 @@ public class GrpcHealthCheckShutdownHook implements GrpcHealthCheckHook {
   @Override
   public void hook(Thread th, ClassLoader cl, DevServerSettings settings, BuildLogger logger) {
     try {
+      long deadlineMs = System.currentTimeMillis() + settings.getThreadInterruptTimeoutMs();
       while (true) {
+        if (System.currentTimeMillis() > deadlineMs) {
+          throw new UnrecoverableException(
+              "GRPC shutdown health-check did not stop reporting SERVING within "
+                  + settings.getThreadInterruptTimeoutMs()
+                  + "ms; the old application may still be running.");
+        }
         logger.debug("Waiting for the GRPC health-check to stop returning SERVING ...");
         var response = isHealthy(logger, settings);
         logger.debug("Response from a health-check: " + response);
