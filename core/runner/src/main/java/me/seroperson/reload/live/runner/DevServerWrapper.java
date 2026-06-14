@@ -44,7 +44,13 @@ public class DevServerWrapper implements ReloadableServer {
     ShutdownHook.logShutdownHooks(buildSystemShutdownHooks, logger);
     ShutdownHook.unregisterShutdownHooks(buildSystemHookThreadIds);
 
-    server.start();
+    try {
+      server.start();
+    } catch (RuntimeException | Error e) {
+      Environment.setEnv(initialEnv);
+      ShutdownHook.setShutdownHooks(new IdentityHashMap<>(buildSystemShutdownHooks));
+      throw e;
+    }
   }
 
   @Override
