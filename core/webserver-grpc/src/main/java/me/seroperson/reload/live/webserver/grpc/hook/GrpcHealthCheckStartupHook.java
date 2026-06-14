@@ -12,7 +12,7 @@ import me.seroperson.reload.live.settings.DevServerSettings;
  * reports {@code SERVING}, ensuring the new generation of the application is ready before requests
  * are accepted.
  */
-public class GrpcHealthCheckStartupHook implements GrpcHealthCheckHook {
+public class GrpcHealthCheckStartupHook extends GrpcHealthCheckHook {
 
   @Override
   public String description() {
@@ -48,6 +48,8 @@ public class GrpcHealthCheckStartupHook implements GrpcHealthCheckHook {
       }
     } catch (InterruptedException e) {
       // Don't print anything, just quit
+    } finally {
+      closeChannel();
     }
   }
 }

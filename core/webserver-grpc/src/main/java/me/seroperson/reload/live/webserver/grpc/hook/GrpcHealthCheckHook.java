@@ -19,32 +19,34 @@ import me.seroperson.reload.live.hook.Hook;
 import me.seroperson.reload.live.settings.DevServerSettings;
 
 /**
- * Base interface for hooks that probe the GRPC health checking protocol of the target server.
+ * Base class for hooks that probe the GRPC health checking protocol of the target server.
  *
- * <p>Each call to {@link #isHealthy} opens a short-lived channel, issues a unary {@code Check}
- * against {@code grpc.health.v1.Health}, and shuts down the channel. The {@code service} field of
- * the request can be configured via {@link DevServerSettings#getGrpcHealthService()}; an empty
- * string queries the overall server health as specified by the protocol.
+ * <p>A single {@link ManagedChannel} is created on the first {@link #isHealthy} call within a
+ * {@link #hook} invocation and reused for all subsequent polls. Subclasses must call {@link
+ * #closeChannel()} — typically in a {@code finally} block — when their {@code hook()} method
+ * returns so the channel is shut down promptly.
+ *
+ * <p>The {@code service} field of the health-check request can be configured via {@link
+ * DevServerSettings#getGrpcHealthService()}; an empty string queries the overall server health as
+ * specified by the protocol.
  */
-interface GrpcHealthCheckHook extends Hook {
+abstract class GrpcHealthCheckHook implements Hook {
+
+  private ManagedChannel channel;
 
   /**
-   * Probes the target GRPC server for health.
+   * Probes the target GRPC server for health, reusing the same channel across calls.
    *
    * @param logger build logger
    * @param settings dev server settings (host, port, service name, TLS flag)
    * @return 1 SERVING, 0 NOT_SERVING/UNKNOWN, -1 connection error, 404 health service not
    *     implemented by the target
    */
-  default int isHealthy(BuildLogger logger, DevServerSettings settings) {
-    var host = settings.getGrpcHost();
-    var port = settings.getGrpcPort();
+  protected final int isHealthy(BuildLogger logger, DevServerSettings settings) {
+    if (channel == null) {
+      channel = buildChannel(settings);
+    }
     var service = settings.getGrpcHealthService();
-    ChannelCredentials credentials =
-        settings.isGrpcTargetTls()
-            ? buildTlsCredentials(settings.getGrpcTargetTlsTrust())
-            : InsecureChannelCredentials.create();
-    ManagedChannel channel = Grpc.newChannelBuilderForAddress(host, port, credentials).build();
     try {
       var stub = HealthGrpc.newBlockingStub(channel).withDeadlineAfter(1, TimeUnit.SECONDS);
       var request =
@@ -60,14 +62,31 @@ interface GrpcHealthCheckHook extends Hook {
     } catch (Exception ex) {
       logger.error("Error during GRPC health check", ex);
       return -1;
-    } finally {
-      channel.shutdownNow();
+    }
+  }
+
+  /** Shuts down the shared channel. Must be called once the polling loop exits. */
+  protected final void closeChannel() {
+    ManagedChannel ch = channel;
+    channel = null;
+    if (ch != null) {
+      ch.shutdownNow();
       try {
-        channel.awaitTermination(1, TimeUnit.SECONDS);
+        ch.awaitTermination(1, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
     }
+  }
+
+  private ManagedChannel buildChannel(DevServerSettings settings) {
+    ChannelCredentials credentials =
+        settings.isGrpcTargetTls()
+            ? buildTlsCredentials(settings.getGrpcTargetTlsTrust())
+            : InsecureChannelCredentials.create();
+    return Grpc.newChannelBuilderForAddress(
+            settings.getGrpcHost(), settings.getGrpcPort(), credentials)
+        .build();
   }
 
   private static ChannelCredentials buildTlsCredentials(String trustPath) {

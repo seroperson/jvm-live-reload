@@ -11,7 +11,7 @@ import me.seroperson.reload.live.settings.DevServerSettings;
  * becomes unreachable, confirming the old generation is no longer answering before a new one is
  * started.
  */
-public class GrpcHealthCheckShutdownHook implements GrpcHealthCheckHook {
+public class GrpcHealthCheckShutdownHook extends GrpcHealthCheckHook {
 
   @Override
   public String description() {
@@ -43,6 +43,8 @@ public class GrpcHealthCheckShutdownHook implements GrpcHealthCheckHook {
       }
     } catch (InterruptedException e) {
       // Don't print anything, just quit
+    } finally {
+      closeChannel();
     }
   }
 }
