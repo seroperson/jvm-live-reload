@@ -171,27 +171,17 @@ class LiveReloadSpec extends LiveReloadBase {
   ) { sbtVersion =>
     withRunner("http4s-propagate-env-rollback", sbtVersion) {
       (runner, proxyPort) =>
-        // Hold the proxy port from the test JVM so the sbt JVM's
-        // proxy server.start() throws BindException. runBackground's
-        // catch must call wrapper.close() to restore the env table
-        // and shutdown hooks in the sbt JVM.
         val blocker = new ServerSocket()
         blocker.setReuseAddress(true)
         try {
           blocker.bind(new InetSocketAddress("localhost", proxyPort))
           val result = runner.run("bgRun")
           val logs = result.logs.mkString("\n")
-          // The held port makes server.start() throw after start() has
-          // already run past Environment.putEnv, so the failed bgRun is
-          // a real leak window, not a no-op.
           assert(
             !result.succeeded,
             s"expected bgRun to fail while the proxy port is held, got logs:\n$logs"
           )
-          // assertEnvRolledBack reads System.getenv in the same JVM that
-          // ran bgRun and fails if JLR_LEAK_CHECK is still set, so task
-          // success is strict evidence that wrapper.close() restored the
-          // env after the failed start.
+
           val check = runner.run("assertEnvRolledBack")
           val checkLogs = check.logs.mkString("\n")
           assert(
