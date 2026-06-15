@@ -129,14 +129,29 @@ public abstract class BaseDevServerStart<S> implements ReloadableServer {
                 } catch (ClassNotFoundException
                     | NoSuchMethodException
                     | IllegalAccessException e) {
+                  // Could not load/locate/access main(String[]). Record the
+                  // failure so the startup health-check hook aborts the reload via
+                  // AppFailureRegistry.throwIfFailed. Do NOT call stopInternal()
+                  // here: it is synchronized on the same monitor the reload thread
+                  // already holds while running the startup hooks, so calling it
+                  // from this thread would deadlock.
                   logger.error("Failed to invoke main method on " + mainClass, e);
-                  stopInternal();
-                  throw new RuntimeException(e);
+                  AppFailureRegistry.record(Thread.currentThread(), e);
                 } catch (InvocationTargetException e) {
                   // Don't log InterruptedException, as likely they're intended
                   if (!(e.getCause() instanceof InterruptedException)) {
                     logger.error("Error in application main thread", e);
                     AppFailureRegistry.record(Thread.currentThread(), e.getCause());
+                  }
+                } catch (Throwable t) {
+                  // e.g. ExceptionInInitializerError / NoClassDefFoundError raised
+                  // while loading or initializing the main class. These are not
+                  // wrapped in InvocationTargetException, so without this branch
+                  // they would escape uncaught on the app thread and the startup
+                  // hook would poll forever.
+                  if (!(t instanceof InterruptedException)) {
+                    logger.error("Failed to start " + mainClass, t);
+                    AppFailureRegistry.record(Thread.currentThread(), t);
                   }
                 }
               },
