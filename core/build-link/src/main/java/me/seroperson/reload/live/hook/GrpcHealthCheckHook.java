@@ -1,34 +1,93 @@
 package me.seroperson.reload.live.hook;
 
+import io.grpc.ChannelCredentials;
+import io.grpc.Grpc;
+import io.grpc.InsecureChannelCredentials;
+import io.grpc.ManagedChannel;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.TlsChannelCredentials;
+import io.grpc.health.v1.HealthCheckRequest;
+import io.grpc.health.v1.HealthCheckResponse;
+import io.grpc.health.v1.HealthGrpc;
+import java.io.File;
 import java.io.IOException;
-import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+import me.seroperson.reload.live.UnrecoverableException;
 import me.seroperson.reload.live.build.BuildLogger;
+import me.seroperson.reload.live.settings.DevServerSettings;
 
 /**
- * Health check hook that uses GRPC health checking to determine server health.
+ * Health check hook that uses the GRPC health checking protocol to determine server health.
  *
- * <p>This hook performs health checks by connecting to the GRPC server and checking if it responds.
- * It uses a simple TCP connection check, as GRPC health checking protocol would require having the
- * GRPC dependencies which are not available in the build-link module.
+ * <p>Each probe issues a unary {@code grpc.health.v1.Health/Check} request and treats only {@code
+ * SERVING} as healthy. The configured service name is respected; an empty string checks the overall
+ * server status.
  */
 interface GrpcHealthCheckHook extends HealthCheckHook {
 
   @Override
   default int isHealthy(BuildLogger logger, String path, String host, int port) {
-    // For GRPC, we do a simple TCP connection check
-    // The 'path' parameter is ignored for GRPC - it's the service name for GRPC health check
-    try (Socket socket = new Socket(host, port)) {
-      socket.setSoTimeout(500);
-      // If we can connect, the server is at least accepting connections
-      // A more sophisticated check would use the GRPC health checking protocol,
-      // but that requires GRPC dependencies
-      return 1;
+    return isHealthy(
+        logger,
+        new DevServerSettings(
+            java.util.List.of(),
+            java.util.List.of(),
+            java.util.Map.of(
+                DevServerSettings.LiveReloadGrpcHost,
+                host,
+                DevServerSettings.LiveReloadGrpcPort,
+                String.valueOf(port),
+                DevServerSettings.LiveReloadGrpcHealthService,
+                path == null ? "" : path)));
+  }
+
+  default int isHealthy(BuildLogger logger, DevServerSettings settings) {
+    var host = settings.getGrpcHost();
+    var port = settings.getGrpcPort();
+    var service = settings.getGrpcHealthService();
+    ChannelCredentials credentials =
+        settings.isGrpcTargetTls()
+            ? buildTlsCredentials(settings.getGrpcTargetTlsTrust())
+            : InsecureChannelCredentials.create();
+    ManagedChannel channel = Grpc.newChannelBuilderForAddress(host, port, credentials).build();
+    try {
+      var stub = HealthGrpc.newBlockingStub(channel).withDeadlineAfter(1, TimeUnit.SECONDS);
+      var request =
+          HealthCheckRequest.newBuilder().setService(service == null ? "" : service).build();
+      var response = stub.check(request);
+      return response.getStatus() == HealthCheckResponse.ServingStatus.SERVING ? 1 : 0;
+    } catch (StatusRuntimeException ex) {
+      var code = ex.getStatus().getCode();
+      if (code == Status.Code.UNIMPLEMENTED) {
+        return 404;
+      }
+      return -1;
+    } catch (Exception ex) {
+      logger.error("Error during GRPC health check", ex);
+      return -1;
+    } finally {
+      channel.shutdownNow();
+      try {
+        channel.awaitTermination(1, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private static ChannelCredentials buildTlsCredentials(String trustPath) {
+    if (trustPath == null || trustPath.isEmpty()) {
+      return TlsChannelCredentials.create();
+    }
+    try {
+      return TlsChannelCredentials.newBuilder().trustManager(new File(trustPath)).build();
     } catch (IOException e) {
-      // Connection failed - server is not ready
-      return -1;
-    } catch (Exception e) {
-      logger.error("Error during GRPC health check", e);
-      return -1;
+      throw new UnrecoverableException(
+          "Failed to read GRPC target TLS trust material from "
+              + trustPath
+              + ": "
+              + e.getMessage());
     }
   }
 }
