@@ -4,6 +4,7 @@ import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.SourceDirectorySet
@@ -26,6 +27,7 @@ import org.slf4j.LoggerFactory
 class LiveReloadPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = createExtension(project)
+        val liveReloadRuntime = createLiveReloadRuntimeConfiguration(project)
         createRunTask(project, extension)
 
         project.afterEvaluate {
@@ -34,7 +36,9 @@ class LiveReloadPlugin : Plugin<Project> {
                     ServerType.HTTP -> "me.seroperson:jvm-live-reload-webserver:${BuildConfig.VERSION}"
                     ServerType.GRPC -> "me.seroperson:jvm-live-reload-webserver-grpc:${BuildConfig.VERSION}"
                 }
-            project.dependencies.add("implementation", dependency)
+            project.dependencies.add(liveReloadRuntime.name, dependency)
+            val liveReloadRun = project.tasks.getByName("liveReloadRun") as LiveReloadRun
+            liveReloadRun.runtimeClasspath.from(liveReloadRuntime)
         }
     }
 
@@ -56,6 +60,14 @@ class LiveReloadPlugin : Plugin<Project> {
 
     private fun createExtension(project: Project): LiveReloadExtension =
         project.extensions.create("liveReload", LiveReloadExtension::class.java)
+
+    private fun createLiveReloadRuntimeConfiguration(project: Project): Configuration =
+        project.configurations.create("liveReloadRuntime").apply {
+            isCanBeConsumed = false
+            isCanBeResolved = true
+            isVisible = false
+            description = "Task-local runtime for the live-reload proxy implementation."
+        }
 
     private fun createRunTask(
         project: Project,
