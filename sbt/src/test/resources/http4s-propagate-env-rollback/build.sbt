@@ -33,10 +33,6 @@ livePropagateEnv := Map(
   "JLR_LEAK_CHECK" -> "leaked"
 )
 
-// Fails when JLR_LEAK_CHECK is still present in the sbt JVM's own process
-// environment, so a leaked env shows up as a task failure rather than as
-// a log line. System.getenv reads the same ProcessEnvironment map that
-// Environment.putEnv/setEnv mutate, so the leak is observable here.
 val assertEnvRolledBack =
   taskKey[Unit]("Fails if JLR_LEAK_CHECK is present in the sbt JVM environment")
 assertEnvRolledBack := {
