@@ -76,13 +76,7 @@ abstract class LiveReloadRun
                     logger.info("Reload application by incremental changes in application classpath")
                     runHandle.markChanged()
                 } else {
-                    if (!changes.isIncremental) {
-                        logger.info("Reload application by no incremental changes")
-                    } else if (changes.getFileChanges(this.classes).iterator().hasNext()) {
-                        logger.info("Reload application by incremental changes in application classpath")
-                    } else {
-                        logger.info("Incremental changes in Assets")
-                    }
+                    logger.info("Incremental changes in Assets")
                 }
             }
         }
