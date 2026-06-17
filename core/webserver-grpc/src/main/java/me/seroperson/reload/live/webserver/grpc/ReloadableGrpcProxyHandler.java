@@ -59,15 +59,25 @@ class ReloadableGrpcProxyHandler {
   /**
    * Gets the current channel, creating one if necessary.
    *
+   * <p>Uses compare-and-set to avoid a race where two concurrent callers both observe a null or
+   * shut-down channel, both call {@link #createChannel()}, and then one of the freshly built
+   * channels is silently overwritten and leaked.
+   *
    * @return the managed channel to the target server
    */
   public Channel getChannel() {
-    ManagedChannel channel = channelRef.get();
-    if (channel == null || channel.isShutdown() || channel.isTerminated()) {
-      channel = createChannel();
-      channelRef.set(channel);
+    ManagedChannel existing = channelRef.get();
+    if (existing != null && !existing.isShutdown() && !existing.isTerminated()) {
+      return existing;
     }
-    return channel;
+    ManagedChannel candidate = createChannel();
+    if (channelRef.compareAndSet(existing, candidate)) {
+      return candidate;
+    }
+    // Another thread won the race — discard the channel we just built and use theirs.
+    candidate.shutdownNow();
+    ManagedChannel winner = channelRef.get();
+    return winner != null ? winner : candidate;
   }
 
   /**
